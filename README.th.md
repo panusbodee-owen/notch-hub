@@ -54,6 +54,11 @@ curl -fL "https://github.com/panusbodee-owen/notch-hub/releases/latest/download/
   <img src="./docs/images/ai-radar.png" alt="หน้าจอ AI Radar แสดง Desktop Apps, CLI และ API บนเครื่อง Mac" width="100%" />
 </p>
 
+### หน้าตั้งค่าโฉมใหม่ (เปิดอัตโนมัติตอนเปิดเครื่อง • 3 ภาษา • ขนาด & โมดูล)
+<p align="center">
+  <img src="./docs/images/settings.png" alt="หน้าตั้งค่า NotchHub พร้อมปุ่ม Launch at Login และสลับ 3 ภาษา" width="100%" />
+</p>
+
 ---
 
 ## ฟีเจอร์เด่นทั้งหมด

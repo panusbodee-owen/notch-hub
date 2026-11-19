@@ -54,6 +54,11 @@ curl -fL "https://github.com/panusbodee-owen/notch-hub/releases/latest/download/
   <img src="./docs/images/ai-radar.png" alt="NotchHub AI Radar showing Desktop Apps, CLI tools, and APIs" width="100%" />
 </p>
 
+### Polished Settings (Launch at Login • 3 Languages • Size Presets • Modules)
+<p align="center">
+  <img src="./docs/images/settings.png" alt="NotchHub Settings UI with Launch at Login and 3-Language Switcher" width="100%" />
+</p>
+
 ---
 
 ## Key Features

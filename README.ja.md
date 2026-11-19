@@ -54,6 +54,11 @@ curl -fL "https://github.com/panusbodee-owen/notch-hub/releases/latest/download/
   <img src="./docs/images/ai-radar.png" alt="NotchHub AI レーダー画面 — Desktop, CLI, API 一覧" width="100%" />
 </p>
 
+### モダン設定画面 (ログイン時自動起動 • 3言語切替 • サイズ＆モジュール)
+<p align="center">
+  <img src="./docs/images/settings.png" alt="NotchHub 設定UI — 自動起動と言語切替" width="100%" />
+</p>
+
 ---
 
 ## 主な機能

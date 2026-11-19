@@ -83,6 +83,20 @@ enum ScreenshotExporter {
         .preferredColorScheme(.dark)
 
         renderToPNG(statesView, to: outDir.appendingPathComponent("notch-states.png"), scale: 2.0)
+
+        // 4. Polished Settings View (General: Launch at Login, Language, Hover Feel)
+        let settingsCoord = makeShowcaseCoordinator(
+            displayState: .expanded,
+            tab: .settings,
+            sampleCaptures: sampleImages
+        )
+        settingsCoord.selectedSettingsSection = "general"
+        let settingsView = macOSDesktopBackdrop(width: 1120, height: 630, showMenuBar: true) {
+            NotchRootView(coordinator: settingsCoord, forceConcaveEars: true, isShowcaseMode: true)
+                .frame(width: 720, height: 390)
+        }
+        renderToPNG(settingsView, to: outDir.appendingPathComponent("settings.png"), scale: 2.0)
+
         print("Exported real SwiftUI screenshots to: \(outDir.path)")
     }
 

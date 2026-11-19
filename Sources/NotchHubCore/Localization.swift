@@ -254,4 +254,52 @@ public struct L10n: Sendable {
         case .ja: return "追加"
         }
     }
+
+    public var launchAtLoginTitle: String {
+        switch lang {
+        case .en: return "Launch at Login"
+        case .th: return "เปิดอัตโนมัติตอนเปิดเครื่อง"
+        case .ja: return "ログイン時に自動起動"
+        }
+    }
+
+    public var launchAtLoginSubtitle: String {
+        switch lang {
+        case .en: return "Start NotchHub automatically when macOS boots"
+        case .th: return "ให้ NotchHub ขึ้นมาทำงานเองทุกครั้งที่เปิดเครื่อง Mac"
+        case .ja: return "macOS 起動時に NotchHub を自動で立ち上げます"
+        }
+    }
+
+    public var settingsGeneral: String {
+        switch lang {
+        case .en: return "General"
+        case .th: return "ทั่วไป"
+        case .ja: return "一般"
+        }
+    }
+
+    public var settingsLayout: String {
+        switch lang {
+        case .en: return "Size & Motion"
+        case .th: return "ขนาด & แอนิเมชัน"
+        case .ja: return "サイズ・動き"
+        }
+    }
+
+    public var settingsModules: String {
+        switch lang {
+        case .en: return "Modules"
+        case .th: return "โมดูล"
+        case .ja: return "モジュール"
+        }
+    }
+
+    public var settingsAbout: String {
+        switch lang {
+        case .en: return "API & About"
+        case .th: return "API & เกี่ยวกับ"
+        case .ja: return "API・情報"
+        }
+    }
 }

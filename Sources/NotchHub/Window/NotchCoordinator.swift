@@ -20,6 +20,7 @@ final class NotchCoordinator: ObservableObject {
     @Published var newQuickAppTarget: String = ""
     @Published var newQuickAppKind: QuickAppKind = .url
     @Published var selectedAIFilter: String = "All"
+    @Published var selectedSettingsSection: String = "general"
     @Published var lastCopiedID: UUID?
     @Published var lastCopiedCaptureID: UUID?
     @Published var currentTime: Date = Date()
@@ -36,6 +37,7 @@ final class NotchCoordinator: ObservableObject {
     let clipboardMonitor: ClipboardMonitor
     let screenshotMonitor: ScreenshotMonitor
     let aiDiscovery: AIDiscoveryService
+    let launchAtLogin: LaunchAtLoginService
 
     private var activityServer: LiveActivityServer?
     private var panel: NotchPanel?
@@ -83,6 +85,7 @@ final class NotchCoordinator: ObservableObject {
             capturesDir: appSupport.appendingPathComponent("Captures", isDirectory: true)
         )
         self.aiDiscovery = AIDiscoveryService()
+        self.launchAtLogin = LaunchAtLoginService()
     }
 
     func start() {
