@@ -169,16 +169,20 @@ struct NotchRootView: View {
         }
     }
 
+    private var palette: NotchThemePalette {
+        NotchThemePalette.palette(for: settingsStore.settings.theme)
+    }
+
     private var notchPillBody: some View {
         ZStack(alignment: .top) {
             shellShape
-                .fill(Color(red: 0.02, green: 0.02, blue: 0.03))
+                .fill(palette.shellFill)
                 .overlay(
                     shellShape
                         .stroke(
                             coordinator.isDropTargeted
-                                ? Color.cyan.opacity(0.95)
-                                : Color.white.opacity(coordinator.displayState == .expanded ? 0.13 : 0.07),
+                                ? palette.accent.opacity(0.95)
+                                : (coordinator.displayState == .expanded ? palette.shellGlowBorder : Color.white.opacity(0.08)),
                             lineWidth: coordinator.isDropTargeted ? 2.0 : 1.0
                         )
                 )
@@ -272,13 +276,13 @@ struct NotchRootView: View {
                             .stroke(Color.white.opacity(0.16), lineWidth: 2)
                         Circle()
                             .trim(from: 0, to: CGFloat(progress))
-                            .stroke(Color.cyan, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                            .stroke(palette.accent, style: StrokeStyle(lineWidth: 2, lineCap: .round))
                             .rotationEffect(.degrees(-90))
                     }
                     .frame(width: 13, height: 13)
                     Text("\(Int(progress * 100))%")
                         .font(.system(size: 10.5, weight: .bold, design: .monospaced))
-                        .foregroundStyle(.cyan)
+                        .foregroundStyle(palette.accent)
                 } else if coordinator.timerStore.isRunning, settingsStore.settings.enableTimer {
                     Image(systemName: "timer")
                         .font(.system(size: 10))
@@ -331,8 +335,11 @@ struct NotchRootView: View {
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
                         .background(
-                            isSelected ? Color.white.opacity(0.16) : Color.clear,
+                            isSelected ? palette.accent.opacity(0.22) : Color.clear,
                             in: Capsule()
+                        )
+                        .overlay(
+                            Capsule().stroke(isSelected ? palette.accent.opacity(0.50) : Color.clear, lineWidth: 0.9)
                         )
                         .foregroundStyle(isSelected ? .white : .white.opacity(0.6))
                     }

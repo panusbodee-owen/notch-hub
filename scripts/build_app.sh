@@ -13,6 +13,9 @@ rm -rf "$APP_DIR"
 mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Resources"
 
 cp "$BIN_PATH" "$APP_DIR/Contents/MacOS/NotchHub"
+if [[ -f "$ROOT_DIR/Resources/AppIcon.icns" ]]; then
+  cp "$ROOT_DIR/Resources/AppIcon.icns" "$APP_DIR/Contents/Resources/AppIcon.icns"
+fi
 
 cat > "$APP_DIR/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -23,6 +26,8 @@ cat > "$APP_DIR/Contents/Info.plist" <<'PLIST'
     <string>en</string>
     <key>CFBundleExecutable</key>
     <string>NotchHub</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
     <string>local.notchhub.app</string>
     <key>CFBundleInfoDictionaryVersion</key>
@@ -32,9 +37,9 @@ cat > "$APP_DIR/Contents/Info.plist" <<'PLIST'
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.3.2</string>
+    <string>0.4.0</string>
     <key>CFBundleVersion</key>
-    <string>6</string>
+    <string>7</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>LSUIElement</key>

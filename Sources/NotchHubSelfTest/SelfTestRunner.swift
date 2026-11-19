@@ -154,7 +154,16 @@ func runAllTests() throws {
     check(qaReloaded.items.count == 2, "quick apps must persist to disk")
     print("[PASS] testQuickAppStore")
 
-    print("\nAll 10 NotchHubCore self-tests passed!")
+    // 11. NotchTheme serialization & default fallback
+    var themedSettings = NotchSettings()
+    themedSettings.theme = .midnight
+    let encodedSettings = try JSONEncoder().encode(themedSettings)
+    let decodedSettings = try JSONDecoder().decode(NotchSettings.self, from: encodedSettings)
+    check(decodedSettings.theme == .midnight, "NotchTheme round-trip mismatch")
+    check(NotchTheme.allCases.count == 6, "expected 6 curated themes")
+    print("[PASS] testNotchThemes")
+
+    print("\nAll 11 NotchHubCore self-tests passed!")
 }
 
 @main

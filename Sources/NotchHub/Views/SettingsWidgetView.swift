@@ -2,9 +2,6 @@ import AppKit
 import NotchHubCore
 import SwiftUI
 
-private let settingsCardFill = Color(red: 0.085, green: 0.088, blue: 0.104)
-private let settingsCardBorder = Color.white.opacity(0.095)
-
 struct SettingsWidgetView: View {
     @ObservedObject var coordinator: NotchCoordinator
     @ObservedObject var settingsStore: SettingsStore
@@ -17,6 +14,9 @@ struct SettingsWidgetView: View {
     }
 
     private var l10n: L10n { coordinator.l10n }
+    private var palette: NotchThemePalette {
+        NotchThemePalette.palette(for: settingsStore.settings.theme)
+    }
 
     private var sections: [(id: String, title: String, icon: String)] {
         [
@@ -54,12 +54,12 @@ struct SettingsWidgetView: View {
                         .padding(.horizontal, 11)
                         .padding(.vertical, 5.5)
                         .background(
-                            active ? Color.cyan.opacity(0.20) : Color.white.opacity(0.05),
+                            active ? palette.accent.opacity(0.22) : Color.white.opacity(0.05),
                             in: Capsule()
                         )
                         .overlay(
                             Capsule().stroke(
-                                active ? Color.cyan.opacity(0.60) : Color.white.opacity(0.07),
+                                active ? palette.accent.opacity(0.65) : Color.white.opacity(0.07),
                                 lineWidth: 1
                             )
                         )
@@ -89,14 +89,80 @@ struct SettingsWidgetView: View {
         }
     }
 
-    // MARK: - 1. General (Launch at Login, Language, Hover Behavior)
+    // MARK: - 1. General (Launch at Login, Theme & Accent, Language, Hover Feel)
 
     private var generalSection: some View {
         VStack(spacing: 10) {
+            // Apple-style Theme & Accent Picker Card
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    iconBadge(
+                        systemName: "paintpalette.fill",
+                        gradient: [palette.accent, palette.accentSecondary]
+                    )
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(l10n.themeLabel)
+                            .font(.system(size: 11.5, weight: .semibold))
+                            .foregroundStyle(.white)
+                        Text(l10n.themeSubtitle)
+                            .font(.system(size: 9.5))
+                            .foregroundStyle(.white.opacity(0.48))
+                    }
+                    Spacer()
+
+                    // Apple macOS-style accent color dots
+                    HStack(spacing: 9) {
+                        ForEach(NotchTheme.allCases) { theme in
+                            let themePal = NotchThemePalette.palette(for: theme)
+                            let selected = settingsStore.settings.theme == theme
+                            Button {
+                                withAnimation(.spring(response: 0.28, dampingFraction: 0.80)) {
+                                    settingsStore.settings.theme = theme
+                                }
+                            } label: {
+                                ZStack {
+                                    Circle()
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [themePal.accent, themePal.accentSecondary],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
+                                        .frame(width: 20, height: 20)
+                                        .shadow(color: selected ? themePal.accent.opacity(0.85) : .clear, radius: 5)
+                                    if selected {
+                                        Circle()
+                                            .strokeBorder(Color.white, lineWidth: 2)
+                                            .frame(width: 24, height: 24)
+                                        Circle()
+                                            .fill(Color.white)
+                                            .frame(width: 5.5, height: 5.5)
+                                    }
+                                }
+                                .frame(width: 24, height: 24)
+                            }
+                            .buttonStyle(NotchSpringButtonStyle(pressedScale: 0.86))
+                            .help(theme.displayName)
+                        }
+                    }
+
+                    Text(settingsStore.settings.theme.displayName)
+                        .font(.system(size: 9.5, weight: .bold, design: .rounded))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(palette.accent.opacity(0.18), in: Capsule())
+                        .foregroundStyle(palette.accent)
+                }
+            }
+            .padding(11)
+            .background(palette.cardFill, in: RoundedRectangle(cornerRadius: 15))
+            .overlay(RoundedRectangle(cornerRadius: 15).stroke(palette.cardBorder, lineWidth: 1))
+
             // Startup & Language Row
             HStack(spacing: 10) {
-                // Launch at Login Hero Card
-                VStack(alignment: .leading, spacing: 8) {
+                // Launch at Login Card
+                VStack(alignment: .leading, spacing: 7) {
                     HStack(spacing: 9) {
                         iconBadge(
                             systemName: "power",
@@ -104,7 +170,7 @@ struct SettingsWidgetView: View {
                                 ? [Color(red: 0.16, green: 0.88, blue: 0.50), Color(red: 0.08, green: 0.58, blue: 0.40)]
                                 : [Color.white.opacity(0.18), Color.white.opacity(0.08)]
                         )
-                        VStack(alignment: .leading, spacing: 2) {
+                        VStack(alignment: .leading, spacing: 1.5) {
                             Text(l10n.launchAtLoginTitle)
                                 .font(.system(size: 11.5, weight: .semibold))
                                 .foregroundStyle(.white)
@@ -131,24 +197,24 @@ struct SettingsWidgetView: View {
                         .foregroundStyle(.white.opacity(0.5))
                         .lineLimit(2)
                 }
-                .padding(12)
-                .frame(maxWidth: .infinity, minHeight: 84, alignment: .topLeading)
-                .background(settingsCardFill, in: RoundedRectangle(cornerRadius: 15))
+                .padding(11)
+                .frame(maxWidth: .infinity, minHeight: 80, alignment: .topLeading)
+                .background(palette.cardFill, in: RoundedRectangle(cornerRadius: 15))
                 .overlay(
                     RoundedRectangle(cornerRadius: 15).stroke(
-                        launchAtLogin.isEnabled ? Color.green.opacity(0.35) : settingsCardBorder,
+                        launchAtLogin.isEnabled ? Color.green.opacity(0.35) : palette.cardBorder,
                         lineWidth: 1
                     )
                 )
 
                 // Language Selector Card
-                VStack(alignment: .leading, spacing: 9) {
+                VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 8) {
                         iconBadge(
                             systemName: "globe",
-                            gradient: [Color.cyan.opacity(0.85), Color.blue.opacity(0.75)]
+                            gradient: [palette.accent, Color.blue.opacity(0.75)]
                         )
-                        VStack(alignment: .leading, spacing: 1.5) {
+                        VStack(alignment: .leading, spacing: 1) {
                             Text(l10n.languageLabel)
                                 .font(.system(size: 11.5, weight: .semibold))
                                 .foregroundStyle(.white)
@@ -170,9 +236,9 @@ struct SettingsWidgetView: View {
                                 Text(lang.displayName)
                                     .font(.system(size: 10.5, weight: .bold, design: .rounded))
                                     .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 5.5)
+                                    .padding(.vertical, 5)
                                     .background(
-                                        selected ? Color.cyan.opacity(0.88) : Color.white.opacity(0.08),
+                                        selected ? palette.accent : Color.white.opacity(0.08),
                                         in: RoundedRectangle(cornerRadius: 9)
                                     )
                                     .foregroundStyle(selected ? .black : .white.opacity(0.82))
@@ -181,14 +247,14 @@ struct SettingsWidgetView: View {
                         }
                     }
                 }
-                .padding(12)
-                .frame(maxWidth: .infinity, minHeight: 84, alignment: .topLeading)
-                .background(settingsCardFill, in: RoundedRectangle(cornerRadius: 15))
-                .overlay(RoundedRectangle(cornerRadius: 15).stroke(settingsCardBorder, lineWidth: 1))
+                .padding(11)
+                .frame(maxWidth: .infinity, minHeight: 80, alignment: .topLeading)
+                .background(palette.cardFill, in: RoundedRectangle(cornerRadius: 15))
+                .overlay(RoundedRectangle(cornerRadius: 15).stroke(palette.cardBorder, lineWidth: 1))
             }
 
             // Interaction & Hover Feel Card
-            VStack(spacing: 10) {
+            VStack(spacing: 9) {
                 HStack(spacing: 16) {
                     HStack(spacing: 8) {
                         iconBadge(
@@ -208,7 +274,7 @@ struct SettingsWidgetView: View {
                             .labelsHidden()
                             .toggleStyle(.switch)
                             .controlSize(.small)
-                            .tint(.cyan)
+                            .tint(palette.accent)
                     }
                     .frame(maxWidth: .infinity)
 
@@ -232,7 +298,7 @@ struct SettingsWidgetView: View {
                             .labelsHidden()
                             .toggleStyle(.switch)
                             .controlSize(.small)
-                            .tint(.cyan)
+                            .tint(palette.accent)
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -245,19 +311,19 @@ struct SettingsWidgetView: View {
                         .foregroundStyle(.white.opacity(0.78))
                     Slider(value: $settingsStore.settings.hoverDelaySeconds, in: 0.08...0.50, step: 0.02)
                         .controlSize(.mini)
-                        .tint(.cyan)
+                        .tint(palette.accent)
                     Text(String(format: "%.0f ms", settingsStore.settings.hoverDelaySeconds * 1000))
                         .font(.system(size: 10, weight: .bold, design: .monospaced))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
                         .background(Color.white.opacity(0.09), in: Capsule())
-                        .foregroundStyle(.cyan)
+                        .foregroundStyle(palette.accent)
                         .frame(width: 62, alignment: .center)
                 }
             }
-            .padding(12)
-            .background(settingsCardFill, in: RoundedRectangle(cornerRadius: 15))
-            .overlay(RoundedRectangle(cornerRadius: 15).stroke(settingsCardBorder, lineWidth: 1))
+            .padding(11)
+            .background(palette.cardFill, in: RoundedRectangle(cornerRadius: 15))
+            .overlay(RoundedRectangle(cornerRadius: 15).stroke(palette.cardBorder, lineWidth: 1))
         }
     }
 
@@ -265,7 +331,6 @@ struct SettingsWidgetView: View {
 
     private var layoutSection: some View {
         VStack(spacing: 10) {
-            // Preset Size Tiles
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text("Quick Size Presets")
@@ -287,20 +352,20 @@ struct SettingsWidgetView: View {
                             VStack(spacing: 3) {
                                 Text(preset.label)
                                     .font(.system(size: 13, weight: .bold, design: .rounded))
-                                    .foregroundStyle(active ? .cyan : .white)
+                                    .foregroundStyle(active ? palette.accent : .white)
                                 Text(preset.subtitle)
                                     .font(.system(size: 9, design: .monospaced))
-                                    .foregroundStyle(active ? .cyan.opacity(0.9) : .white.opacity(0.5))
+                                    .foregroundStyle(active ? palette.accent.opacity(0.9) : .white.opacity(0.5))
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 8)
                             .background(
-                                active ? Color.cyan.opacity(0.16) : Color.white.opacity(0.05),
+                                active ? palette.accent.opacity(0.16) : Color.white.opacity(0.05),
                                 in: RoundedRectangle(cornerRadius: 11)
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 11).stroke(
-                                    active ? Color.cyan.opacity(0.70) : Color.white.opacity(0.08),
+                                    active ? palette.accent.opacity(0.70) : Color.white.opacity(0.08),
                                     lineWidth: active ? 1.2 : 1
                                 )
                             )
@@ -310,10 +375,9 @@ struct SettingsWidgetView: View {
                 }
             }
             .padding(12)
-            .background(settingsCardFill, in: RoundedRectangle(cornerRadius: 15))
-            .overlay(RoundedRectangle(cornerRadius: 15).stroke(settingsCardBorder, lineWidth: 1))
+            .background(palette.cardFill, in: RoundedRectangle(cornerRadius: 15))
+            .overlay(RoundedRectangle(cornerRadius: 15).stroke(palette.cardBorder, lineWidth: 1))
 
-            // Fine Sliders Card
             VStack(spacing: 9) {
                 dimensionSliderRow(
                     title: "Expanded Width",
@@ -338,8 +402,8 @@ struct SettingsWidgetView: View {
                 )
             }
             .padding(12)
-            .background(settingsCardFill, in: RoundedRectangle(cornerRadius: 15))
-            .overlay(RoundedRectangle(cornerRadius: 15).stroke(settingsCardBorder, lineWidth: 1))
+            .background(palette.cardFill, in: RoundedRectangle(cornerRadius: 15))
+            .overlay(RoundedRectangle(cornerRadius: 15).stroke(palette.cardBorder, lineWidth: 1))
         }
     }
 
@@ -392,32 +456,31 @@ struct SettingsWidgetView: View {
                 title: "System HUD",
                 subtitle: "Battery, CPU rings & Volume",
                 icon: "gauge.medium",
-                gradient: [Color.cyan.opacity(0.85), Color.mint.opacity(0.75)],
+                gradient: [palette.accent, Color.mint.opacity(0.75)],
                 isOn: $settingsStore.settings.enableSystemHUD
             )
         }
     }
 
-    // MARK: - 4. API & About
+    // MARK: - 4. API & About (with Real App Logo!)
 
     private var aboutSection: some View {
         VStack(spacing: 10) {
-            HStack(spacing: 10) {
-                iconBadge(
-                    systemName: "rectangle.topthird.inset.filled",
-                    gradient: [Color.indigo, Color.cyan]
-                )
+            HStack(spacing: 12) {
+                appLogoImage
+                    .frame(width: 40, height: 40)
+
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
                         Text("NotchHub")
-                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .font(.system(size: 13.5, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
-                        Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.3.2")")
+                        Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.4.0")")
                             .font(.system(size: 9.5, weight: .bold, design: .monospaced))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(Color.cyan.opacity(0.20), in: Capsule())
-                            .foregroundStyle(.cyan)
+                            .background(palette.accent.opacity(0.20), in: Capsule())
+                            .foregroundStyle(palette.accent)
                     }
                     Text("Native SwiftUI macOS Dynamic Island • Apple Silicon")
                         .font(.system(size: 10))
@@ -437,14 +500,14 @@ struct SettingsWidgetView: View {
                 .buttonStyle(NotchSpringButtonStyle())
             }
             .padding(12)
-            .background(settingsCardFill, in: RoundedRectangle(cornerRadius: 15))
-            .overlay(RoundedRectangle(cornerRadius: 15).stroke(settingsCardBorder, lineWidth: 1))
+            .background(palette.cardFill, in: RoundedRectangle(cornerRadius: 15))
+            .overlay(RoundedRectangle(cornerRadius: 15).stroke(palette.cardBorder, lineWidth: 1))
 
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Label("Loopback Live Activity API", systemImage: "bolt.horizontal.fill")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.cyan)
+                        .foregroundStyle(palette.accent)
                     Spacer()
                     Text("127.0.0.1:\(settingsStore.settings.apiPort)")
                         .font(.system(size: 10, weight: .bold, design: .monospaced))
@@ -478,20 +541,34 @@ struct SettingsWidgetView: View {
                     .font(.system(size: 10, weight: .semibold))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
-                    .background(Color.cyan.opacity(0.22), in: Capsule())
-                    .foregroundStyle(.cyan)
+                    .background(palette.accent.opacity(0.22), in: Capsule())
+                    .foregroundStyle(palette.accent)
                     .buttonStyle(NotchSpringButtonStyle())
 
                     Spacer()
                 }
             }
             .padding(12)
-            .background(settingsCardFill, in: RoundedRectangle(cornerRadius: 15))
-            .overlay(RoundedRectangle(cornerRadius: 15).stroke(settingsCardBorder, lineWidth: 1))
+            .background(palette.cardFill, in: RoundedRectangle(cornerRadius: 15))
+            .overlay(RoundedRectangle(cornerRadius: 15).stroke(palette.cardBorder, lineWidth: 1))
         }
     }
 
-    // MARK: - Reusable Polished Subviews
+    // MARK: - Subviews
+
+    @ViewBuilder
+    private var appLogoImage: some View {
+        if let iconImg = NSApp.applicationIconImage {
+            Image(nsImage: iconImg)
+                .resizable()
+                .scaledToFit()
+        } else {
+            iconBadge(
+                systemName: "rectangle.topthird.inset.filled",
+                gradient: [palette.accent, palette.accentSecondary]
+            )
+        }
+    }
 
     private func iconBadge(systemName: String, gradient: [Color]) -> some View {
         ZStack {
@@ -528,14 +605,14 @@ struct SettingsWidgetView: View {
                 .labelsHidden()
                 .toggleStyle(.switch)
                 .controlSize(.mini)
-                .tint(.cyan)
+                .tint(palette.accent)
         }
         .padding(.horizontal, 11)
         .padding(.vertical, 9)
-        .background(settingsCardFill, in: RoundedRectangle(cornerRadius: 13))
+        .background(palette.cardFill, in: RoundedRectangle(cornerRadius: 13))
         .overlay(
             RoundedRectangle(cornerRadius: 13).stroke(
-                isOn.wrappedValue ? Color.white.opacity(0.13) : Color.white.opacity(0.06),
+                isOn.wrappedValue ? palette.cardBorder : Color.white.opacity(0.05),
                 lineWidth: 1
             )
         )
@@ -555,13 +632,13 @@ struct SettingsWidgetView: View {
                 .frame(width: 145, alignment: .leading)
             Slider(value: value, in: range, step: step)
                 .controlSize(.mini)
-                .tint(.cyan)
+                .tint(palette.accent)
             Text(valueText)
                 .font(.system(size: 10, weight: .bold, design: .monospaced))
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
                 .background(Color.white.opacity(0.08), in: Capsule())
-                .foregroundStyle(.cyan)
+                .foregroundStyle(palette.accent)
                 .frame(width: 68, alignment: .center)
         }
     }

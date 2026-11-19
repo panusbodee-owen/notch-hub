@@ -302,4 +302,20 @@ public struct L10n: Sendable {
         case .ja: return "API・情報"
         }
     }
+
+    public var themeLabel: String {
+        switch lang {
+        case .en: return "Theme & Accent"
+        case .th: return "ธีม & สีเน้น"
+        case .ja: return "テーマ・アクセント"
+        }
+    }
+
+    public var themeSubtitle: String {
+        switch lang {
+        case .en: return "Apple-style dynamic accent & dark glass tint"
+        case .th: return "เลือกโทนสีและแสงเรืองของ Notch แบบเรียลไทม์"
+        case .ja: return "ノッチのアクセントカラーとダークガラス調を切替"
+        }
+    }
 }

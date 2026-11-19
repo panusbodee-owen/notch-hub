@@ -97,6 +97,10 @@ struct HomeWidgetView: View {
         L10n(settingsStore.settings.language)
     }
 
+    private var palette: NotchThemePalette {
+        NotchThemePalette.palette(for: settingsStore.settings.theme)
+    }
+
     private var activeGadgets: [HomeGadgetKind] {
         settingsStore.settings.homeGadgets
     }
@@ -120,9 +124,9 @@ struct HomeWidgetView: View {
                     }
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3.5)
-                    .background(Color.cyan.opacity(0.18), in: Capsule())
-                    .overlay(Capsule().stroke(Color.cyan.opacity(0.45), lineWidth: 0.8))
-                    .foregroundStyle(.cyan)
+                    .background(palette.accent.opacity(0.18), in: Capsule())
+                    .overlay(Capsule().stroke(palette.accent.opacity(0.50), lineWidth: 0.8))
+                    .foregroundStyle(palette.accent)
                 }
                 .buttonStyle(.plain)
                 .help("Capture screen region directly into your 5-shot tray")
@@ -302,8 +306,8 @@ struct HomeWidgetView: View {
                     }
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
-                    .background(Color.purple.opacity(0.24), in: Capsule())
-                    .overlay(Capsule().stroke(Color.purple.opacity(0.55), lineWidth: 0.8))
+                    .background(palette.accent.opacity(0.22), in: Capsule())
+                    .overlay(Capsule().stroke(palette.accent.opacity(0.55), lineWidth: 0.8))
                     .foregroundStyle(.white)
                 }
                 .buttonStyle(.plain)
@@ -395,8 +399,8 @@ struct HomeWidgetView: View {
             }
         }
         .padding(11)
-        .background(gadgetCardFill, in: RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(gadgetCardBorder, lineWidth: 1))
+        .background(palette.cardFill, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(palette.cardBorder, lineWidth: 1))
         .onDrop(of: [UTType.fileURL], isTargeted: nil) { providers in
             handleQuickAppDrop(providers)
         }
@@ -550,8 +554,8 @@ struct HomeWidgetView: View {
             }
         }
         .padding(11)
-        .background(gadgetCardFill, in: RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(gadgetCardBorder, lineWidth: 1))
+        .background(palette.cardFill, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(palette.cardBorder, lineWidth: 1))
     }
 
     private func captureThumbnailCard(_ item: ScreenshotItem) -> some View {
@@ -744,8 +748,8 @@ struct HomeWidgetView: View {
         }
         .padding(11)
         .frame(maxWidth: .infinity, minHeight: 102, alignment: .topLeading)
-        .background(gadgetCardFill, in: RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(gadgetCardBorder, lineWidth: 1))
+        .background(palette.cardFill, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(palette.cardBorder, lineWidth: 1))
     }
 
     /// Now Playing with Animated Green Waveform
@@ -811,8 +815,8 @@ struct HomeWidgetView: View {
         }
         .padding(11)
         .frame(maxWidth: .infinity, minHeight: 102, alignment: .topLeading)
-        .background(gadgetCardFill, in: RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(gadgetCardBorder, lineWidth: 1))
+        .background(palette.cardFill, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(palette.cardBorder, lineWidth: 1))
     }
 
     /// Big Crisp Focus Timer + Vibrant Orange Play Circle
@@ -876,8 +880,8 @@ struct HomeWidgetView: View {
         }
         .padding(11)
         .frame(maxWidth: .infinity, minHeight: 102, alignment: .topLeading)
-        .background(gadgetCardFill, in: RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(gadgetCardBorder, lineWidth: 1))
+        .background(palette.cardFill, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(palette.cardBorder, lineWidth: 1))
     }
 
     /// System HUD with Circular Battery & CPU Gauge Rings + Capsule Volume Bar
@@ -913,7 +917,7 @@ struct HomeWidgetView: View {
                 HStack(spacing: 8) {
                     CircularGaugeRing(
                         progress: system.snapshot.cpuUsagePercent / 100.0,
-                        tint: Color.cyan.opacity(0.9),
+                        tint: palette.accent.opacity(0.95),
                         iconName: nil
                     )
                     VStack(alignment: .leading, spacing: 1) {
@@ -951,8 +955,8 @@ struct HomeWidgetView: View {
         }
         .padding(11)
         .frame(maxWidth: .infinity, minHeight: 102, alignment: .topLeading)
-        .background(gadgetCardFill, in: RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(gadgetCardBorder, lineWidth: 1))
+        .background(palette.cardFill, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(palette.cardBorder, lineWidth: 1))
     }
 
     private var aiMiniCard: some View {
@@ -1046,8 +1050,8 @@ struct HomeWidgetView: View {
         }
         .padding(11)
         .frame(maxWidth: .infinity, minHeight: 102, alignment: .topLeading)
-        .background(gadgetCardFill, in: RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(gadgetCardBorder, lineWidth: 1))
+        .background(palette.cardFill, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(palette.cardBorder, lineWidth: 1))
     }
 
     private var clockCard: some View {
@@ -1073,8 +1077,8 @@ struct HomeWidgetView: View {
         }
         .padding(11)
         .frame(maxWidth: .infinity, minHeight: 102, alignment: .topLeading)
-        .background(gadgetCardFill, in: RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(gadgetCardBorder, lineWidth: 1))
+        .background(palette.cardFill, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(palette.cardBorder, lineWidth: 1))
     }
 
     private var mirrorCard: some View {

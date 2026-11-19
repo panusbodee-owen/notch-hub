@@ -15,6 +15,10 @@ struct AICreatorWidgetView: View {
         self.aiDiscovery = coordinator.aiDiscovery
     }
 
+    private var palette: NotchThemePalette {
+        NotchThemePalette.palette(for: coordinator.settingsStore.settings.theme)
+    }
+
     private var creativeApps: [(name: String, path: String, icon: String, accent: Color)] {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         let blenderPath = FileManager.default.fileExists(atPath: "/Applications/Blender.app")
@@ -214,8 +218,8 @@ struct AICreatorWidgetView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
-            .background(aiCardFill, in: RoundedRectangle(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(aiCardBorder, lineWidth: 1))
+            .background(palette.cardFill, in: RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(palette.cardBorder, lineWidth: 1))
         }
         .buttonStyle(.plain)
         .help("\(actionLabel(for: item)) \(item.name) — \(item.targetPathOrURL)")
@@ -238,17 +242,17 @@ struct AICreatorWidgetView: View {
                 ZStack(alignment: .leading) {
                     Capsule().fill(Color.white.opacity(0.14))
                     Capsule()
-                        .fill(Color.cyan)
+                        .fill(palette.accent)
                         .frame(width: max(8, proxy.size.width * CGFloat(act.progress ?? 0.5)))
-                        .shadow(color: .cyan.opacity(0.85), radius: 5)
+                        .shadow(color: palette.accent.opacity(0.85), radius: 5)
                 }
             }
             .frame(height: 5.5)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(aiCardFill, in: RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.cyan.opacity(0.42), lineWidth: 1))
+        .background(palette.cardFill, in: RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(palette.accent.opacity(0.45), lineWidth: 1))
     }
 
     private var jobsSection: some View {

@@ -4,6 +4,10 @@
   <strong>日本語</strong>
 </p>
 
+<p align="center">
+  <img src="./docs/images/app-icon.png" alt="NotchHub macOS アプリアイコン" width="112" />
+</p>
+
 <h1 align="center">NotchHub</h1>
 
 <p align="center">

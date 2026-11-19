@@ -353,6 +353,28 @@ public struct ScreenshotItem: Identifiable, Codable, Equatable, Sendable {
     public var url: URL { URL(fileURLWithPath: filePath) }
 }
 
+public enum NotchTheme: String, CaseIterable, Identifiable, Codable, Equatable, Sendable {
+    case obsidian
+    case midnight
+    case emerald
+    case sunset
+    case rose
+    case graphite
+
+    public var id: String { rawValue }
+
+    public var displayName: String {
+        switch self {
+        case .obsidian: return "Cyan"
+        case .midnight: return "Indigo"
+        case .emerald: return "Emerald"
+        case .sunset: return "Amber"
+        case .rose: return "Rose"
+        case .graphite: return "Graphite"
+        }
+    }
+}
+
 public struct NotchSettings: Codable, Equatable, Sendable {
     public var enableMedia: Bool = true
     public var enableShelf: Bool = true
@@ -371,6 +393,7 @@ public struct NotchSettings: Codable, Equatable, Sendable {
     public var maxScreenshots: Int = 5
     public var scratchpadText: String = ""
     public var language: AppLanguage = .en
+    public var theme: NotchTheme = .obsidian
 
     public init() {}
 
@@ -394,5 +417,6 @@ public struct NotchSettings: Codable, Equatable, Sendable {
         self.maxScreenshots = try c.decodeIfPresent(Int.self, forKey: .maxScreenshots) ?? 5
         self.scratchpadText = try c.decodeIfPresent(String.self, forKey: .scratchpadText) ?? ""
         self.language = try c.decodeIfPresent(AppLanguage.self, forKey: .language) ?? .en
+        self.theme = try c.decodeIfPresent(NotchTheme.self, forKey: .theme) ?? .obsidian
     }
 }

@@ -4,6 +4,10 @@
   <a href="./README.ja.md">日本語</a>
 </p>
 
+<p align="center">
+  <img src="./docs/images/app-icon.png" alt="โลโก้แอป NotchHub สำหรับ macOS" width="112" />
+</p>
+
 <h1 align="center">NotchHub</h1>
 
 <p align="center">

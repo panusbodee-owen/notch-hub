@@ -93,7 +93,7 @@ enum ScreenshotExporter {
         settingsCoord.selectedSettingsSection = "general"
         let settingsView = macOSDesktopBackdrop(width: 1120, height: 630, showMenuBar: true) {
             NotchRootView(coordinator: settingsCoord, forceConcaveEars: true, isShowcaseMode: true)
-                .frame(width: 720, height: 390)
+                .frame(width: 740, height: 460)
         }
         renderToPNG(settingsView, to: outDir.appendingPathComponent("settings.png"), scale: 2.0)
 
