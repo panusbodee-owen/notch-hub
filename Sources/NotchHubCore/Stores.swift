@@ -292,6 +292,80 @@ public final class ScreenshotTrayStore: ObservableObject {
 }
 
 @MainActor
+public final class QuickAppStore: ObservableObject {
+    @Published public private(set) var items: [QuickAppItem] = []
+    private let storageURL: URL?
+
+    public init(storageURL: URL? = nil, defaultItems: [QuickAppItem] = []) {
+        self.storageURL = storageURL
+        if !load(), !defaultItems.isEmpty {
+            self.items = defaultItems
+            save()
+        }
+    }
+
+    public func add(_ item: QuickAppItem) {
+        let trimmedTarget = item.target.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedName = item.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTarget.isEmpty, !trimmedName.isEmpty else { return }
+
+        if let existingIdx = items.firstIndex(where: { $0.target == trimmedTarget && $0.kind == item.kind }) {
+            items[existingIdx].name = trimmedName
+        } else {
+            items.append(
+                QuickAppItem(
+                    id: item.id,
+                    name: trimmedName,
+                    kind: item.kind,
+                    target: trimmedTarget,
+                    iconSymbol: item.iconSymbol
+                )
+            )
+        }
+        save()
+    }
+
+    public func remove(id: UUID) {
+        items.removeAll { $0.id == id }
+        save()
+    }
+
+    public func move(id: UUID, offset: Int) {
+        guard let idx = items.firstIndex(where: { $0.id == id }) else { return }
+        let target = idx + offset
+        guard target >= 0 && target < items.count else { return }
+        items.swapAt(idx, target)
+        save()
+    }
+
+    public func replaceAll(_ newItems: [QuickAppItem]) {
+        items = newItems
+        save()
+    }
+
+    @discardableResult
+    private func load() -> Bool {
+        guard let url = storageURL, let data = try? Data(contentsOf: url) else { return false }
+        if let decoded = try? JSONDecoder().decode([QuickAppItem].self, from: data) {
+            items = decoded
+            return true
+        }
+        return false
+    }
+
+    private func save() {
+        guard let url = storageURL else { return }
+        try? FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        if let encoded = try? JSONEncoder().encode(items) {
+            try? encoded.write(to: url, options: .atomic)
+        }
+    }
+}
+
+@MainActor
 public final class SettingsStore: ObservableObject {
     @Published public var settings: NotchSettings {
         didSet { save() }

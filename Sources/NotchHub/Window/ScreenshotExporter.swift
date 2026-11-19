@@ -25,7 +25,7 @@ enum ScreenshotExporter {
         )
         let heroView = macOSDesktopBackdrop(width: 1120, height: 630, showMenuBar: true) {
             NotchRootView(coordinator: homeCoord, forceConcaveEars: true)
-                .frame(width: 720, height: 455)
+                .frame(width: 740, height: 555)
         }
         renderToPNG(heroView, to: outDir.appendingPathComponent("hero-banner.png"), scale: 2.0)
 
@@ -192,9 +192,21 @@ enum ScreenshotExporter {
         coord.displayState = displayState
         coord.selectedTab = tab
         coord.settingsStore.settings.language = .en
-        coord.settingsStore.settings.homeGadgets = [.captures, .aiRadar, .media, .timer, .system]
-        coord.settingsStore.settings.expandedWidth = 700
-        coord.settingsStore.settings.expandedHeight = 440
+        coord.settingsStore.settings.homeGadgets = [.quickApps, .captures, .aiRadar, .media, .timer, .system]
+        coord.settingsStore.settings.expandedWidth = 720
+        coord.settingsStore.settings.expandedHeight = 540
+
+        let homeDir = FileManager.default.homeDirectoryForCurrentUser.path
+        coord.quickAppStore.replaceAll([
+            QuickAppItem(name: "AI Power Ranger", kind: .url, target: "http://localhost:3000", iconSymbol: "bolt.shield.fill"),
+            QuickAppItem(name: "Antigravity", kind: .app, target: "/Applications/Antigravity.app"),
+            QuickAppItem(name: "FilmCraft", kind: .app, target: "/Applications/FilmCraft.app"),
+            QuickAppItem(name: "EffectCraft", kind: .app, target: "/Applications/EffectCraft.app"),
+            QuickAppItem(name: "Blender", kind: .app, target: "\(homeDir)/Applications/Blender.app"),
+            QuickAppItem(name: "Claude", kind: .app, target: "/Applications/Claude.app"),
+            QuickAppItem(name: "ChatGPT", kind: .app, target: "/Applications/ChatGPT.app"),
+            QuickAppItem(name: "AI-Team", kind: .folder, target: "\(homeDir)/Desktop/AI-Team-Projects")
+        ])
 
         coord.mediaService.track = MediaTrackInfo(
             appName: "Spotify",

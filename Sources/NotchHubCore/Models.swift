@@ -167,6 +167,7 @@ public struct SystemSnapshot: Equatable, Sendable {
 
 public enum HomeGadgetKind: String, CaseIterable, Identifiable, Codable, Equatable, Sendable {
     case captures
+    case quickApps
     case aiRadar
     case media
     case ai
@@ -180,6 +181,7 @@ public enum HomeGadgetKind: String, CaseIterable, Identifiable, Codable, Equatab
     public var displayName: String {
         switch self {
         case .captures: return "Captures (5)"
+        case .quickApps: return "Quick Apps"
         case .aiRadar: return "My AIs"
         case .media: return "Media"
         case .ai: return "AI Jobs"
@@ -193,6 +195,7 @@ public enum HomeGadgetKind: String, CaseIterable, Identifiable, Codable, Equatab
     public var symbolName: String {
         switch self {
         case .captures: return "camera.viewfinder"
+        case .quickApps: return "square.grid.2x2.fill"
         case .aiRadar: return "brain.head.profile"
         case .media: return "music.note"
         case .ai: return "cpu.fill"
@@ -204,7 +207,47 @@ public enum HomeGadgetKind: String, CaseIterable, Identifiable, Codable, Equatab
     }
 
     public var isFullWidth: Bool {
-        self == .captures
+        self == .captures || self == .quickApps
+    }
+}
+
+public enum QuickAppKind: String, CaseIterable, Identifiable, Codable, Equatable, Sendable {
+    case app
+    case folder
+    case url
+    case command
+
+    public var id: String { rawValue }
+
+    public var symbolName: String {
+        switch self {
+        case .app: return "app.fill"
+        case .folder: return "folder.fill"
+        case .url: return "globe"
+        case .command: return "terminal.fill"
+        }
+    }
+}
+
+public struct QuickAppItem: Identifiable, Codable, Equatable, Sendable {
+    public var id: UUID
+    public var name: String
+    public var kind: QuickAppKind
+    public var target: String
+    public var iconSymbol: String?
+
+    public init(
+        id: UUID = UUID(),
+        name: String,
+        kind: QuickAppKind,
+        target: String,
+        iconSymbol: String? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.kind = kind
+        self.target = target
+        self.iconSymbol = iconSymbol
     }
 }
 
@@ -324,7 +367,7 @@ public struct NotchSettings: Codable, Equatable, Sendable {
     public var expandedWidth: Double = 700
     public var expandedHeight: Double = 440
     public var compactWingExtraWidth: Double = 180
-    public var homeGadgets: [HomeGadgetKind] = [.captures, .aiRadar, .media, .timer, .system]
+    public var homeGadgets: [HomeGadgetKind] = [.quickApps, .captures, .aiRadar, .media, .timer, .system]
     public var maxScreenshots: Int = 5
     public var scratchpadText: String = ""
     public var language: AppLanguage = .en
@@ -347,7 +390,7 @@ public struct NotchSettings: Codable, Equatable, Sendable {
         self.expandedHeight = try c.decodeIfPresent(Double.self, forKey: .expandedHeight) ?? 440
         self.compactWingExtraWidth = try c.decodeIfPresent(Double.self, forKey: .compactWingExtraWidth) ?? 180
         self.homeGadgets = try c.decodeIfPresent([HomeGadgetKind].self, forKey: .homeGadgets)
-            ?? [.captures, .aiRadar, .media, .timer, .system]
+            ?? [.quickApps, .captures, .aiRadar, .media, .timer, .system]
         self.maxScreenshots = try c.decodeIfPresent(Int.self, forKey: .maxScreenshots) ?? 5
         self.scratchpadText = try c.decodeIfPresent(String.self, forKey: .scratchpadText) ?? ""
         self.language = try c.decodeIfPresent(AppLanguage.self, forKey: .language) ?? .en

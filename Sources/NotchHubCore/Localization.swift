@@ -50,6 +50,7 @@ public struct L10n: Sendable {
         case (.en, _): return kind.displayName
 
         case (.th, .captures): return "ภาพ Cap (5)"
+        case (.th, .quickApps): return "แอปด่วน"
         case (.th, .aiRadar): return "AI ในเครื่อง"
         case (.th, .media): return "เพลง"
         case (.th, .ai): return "สถานะงาน AI"
@@ -59,6 +60,7 @@ public struct L10n: Sendable {
         case (.th, .clock): return "นาฬิกา"
 
         case (.ja, .captures): return "スクショ (5)"
+        case (.ja, .quickApps): return "クイックアプリ"
         case (.ja, .aiRadar): return "AI レーダー"
         case (.ja, .media): return "メディア"
         case (.ja, .ai): return "AI ジョブ"
@@ -218,6 +220,38 @@ public struct L10n: Sendable {
         case .en: return "Clock"
         case .th: return "นาฬิกา"
         case .ja: return "時計"
+        }
+    }
+
+    public var quickAppsTitle: String {
+        switch lang {
+        case .en: return "Quick Apps"
+        case .th: return "แอป & โปรเจกต์ที่ใช้บ่อย"
+        case .ja: return "クイックアプリ"
+        }
+    }
+
+    public var addApp: String {
+        switch lang {
+        case .en: return "Add App"
+        case .th: return "เพิ่มแอป"
+        case .ja: return "アプリ追加"
+        }
+    }
+
+    public var pickFromMac: String {
+        switch lang {
+        case .en: return "Pick .app / Folder..."
+        case .th: return "เลือก .app / โฟลเดอร์..."
+        case .ja: return "アプリ/フォルダ選択..."
+        }
+    }
+
+    public var addCustomAction: String {
+        switch lang {
+        case .en: return "Add"
+        case .th: return "เพิ่ม"
+        case .ja: return "追加"
         }
     }
 }

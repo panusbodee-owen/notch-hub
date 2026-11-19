@@ -15,11 +15,17 @@ struct AICreatorWidgetView: View {
         self.aiDiscovery = coordinator.aiDiscovery
     }
 
-    private let creativeApps: [(name: String, path: String, icon: String, accent: Color)] = [
-        ("FilmCraft", "/Applications/FilmCraft.app", "film.fill", .purple),
-        ("EffectCraft", "/Applications/EffectCraft.app", "wand.and.stars", .cyan),
-        ("Blender", "/Applications/Blender.app", "cube.transparent.fill", .orange)
-    ]
+    private var creativeApps: [(name: String, path: String, icon: String, accent: Color)] {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let blenderPath = FileManager.default.fileExists(atPath: "/Applications/Blender.app")
+            ? "/Applications/Blender.app"
+            : "\(home)/Applications/Blender.app"
+        return [
+            ("FilmCraft", "/Applications/FilmCraft.app", "film.fill", .purple),
+            ("EffectCraft", "/Applications/EffectCraft.app", "wand.and.stars", .cyan),
+            ("Blender", blenderPath, "cube.transparent.fill", .orange)
+        ]
+    }
 
     private var filters: [(id: String, label: String, count: Int)] {
         [

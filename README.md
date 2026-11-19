@@ -62,6 +62,9 @@ curl -fL "https://github.com/panusbodee-owen/notch-hub/releases/latest/download/
   - Seamlessly blends into the MacBook hardware notch (`Closed`), shows subtle status wings (`Compact`), and expands smoothly on hover/click (`Expanded`) over full-screen apps without stealing focus.
   - **Adjustable size:** Drag the bottom-right corner (`↖↘`) symmetrically in real time, pick **`S / M / L / XL`** presets, or fine-tune width, height, and compact wing width in **Settings**.
   - **Built-in 3-Language UI:** Switch instantly between **`EN` / `ไทย` / `日本語`** inside Settings.
+- **Quick Apps Dock & 1-Click Add App:**
+  - Pin your most-used macOS `.app` bundles, project folders, local web apps (`http://localhost:PORT`), or Terminal launch commands directly in the Notch.
+  - Add new items via native Finder picker (**`Pick .app / Folder...`**), inline URL/Command form, or drag-and-drop any `.app`/folder straight onto the bar — with live green running indicators.
 - **Customizable Home Gadgets:**
   - Click **`Gadgets`** on the Home tab to add, remove, or reorder: **Recent Captures (5)**, **My AIs Radar**, **Media**, **AI Jobs**, **Timer**, **System HUD**, **Quick Note**, and **Clock**.
 - **Auto 5-Slot Screenshot Tray:**

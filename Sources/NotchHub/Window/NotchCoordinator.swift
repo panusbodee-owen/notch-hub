@@ -13,6 +13,11 @@ final class NotchCoordinator: ObservableObject {
     @Published var isPinnedOpen: Bool = false
     @Published var isResizing: Bool = false
     @Published var isEditingHomeGadgets: Bool = false
+    @Published var isAddingQuickApp: Bool = false
+    @Published var isEditingQuickApps: Bool = false
+    @Published var newQuickAppName: String = ""
+    @Published var newQuickAppTarget: String = ""
+    @Published var newQuickAppKind: QuickAppKind = .url
     @Published var selectedAIFilter: String = "All"
     @Published var lastCopiedID: UUID?
     @Published var lastCopiedCaptureID: UUID?
@@ -21,6 +26,7 @@ final class NotchCoordinator: ObservableObject {
     let settingsStore: SettingsStore
     let shelfStore: FileShelfStore
     let screenshotStore: ScreenshotTrayStore
+    let quickAppStore: QuickAppStore
     let clipboardStore: ClipboardStore
     let timerStore: FocusTimerStore
     let activityStore: LiveActivityStore
@@ -51,6 +57,17 @@ final class NotchCoordinator: ObservableObject {
             maxItems: sStore.settings.maxScreenshots
         )
         self.screenshotStore = capStore
+
+        let quickAppsFile = appSupport.appendingPathComponent("quick_apps.json")
+        let isFirstQuickAppSetup = !inMemoryOnly && !FileManager.default.fileExists(atPath: quickAppsFile.path)
+        self.quickAppStore = QuickAppStore(
+            storageURL: inMemoryOnly ? nil : quickAppsFile,
+            defaultItems: Self.discoverDefaultQuickApps()
+        )
+        if isFirstQuickAppSetup && !sStore.settings.homeGadgets.contains(.quickApps) {
+            sStore.settings.homeGadgets.insert(.quickApps, at: 0)
+        }
+
         self.clipboardStore = ClipboardStore(maxEntries: 18)
         self.timerStore = FocusTimerStore()
         self.activityStore = LiveActivityStore()
@@ -350,6 +367,129 @@ final class NotchCoordinator: ObservableObject {
         let url = URL(fileURLWithPath: appPath)
         guard FileManager.default.fileExists(atPath: appPath) else { return }
         NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+    }
+
+    func launchQuickApp(_ item: QuickAppItem) {
+        switch item.kind {
+        case .app:
+            let url = URL(fileURLWithPath: item.target)
+            if FileManager.default.fileExists(atPath: url.path) {
+                NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+            }
+        case .folder:
+            let expanded = (item.target as NSString).expandingTildeInPath
+            let url = URL(fileURLWithPath: expanded)
+            NSWorkspace.shared.open(url)
+        case .url:
+            var raw = item.target.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !raw.contains("://") {
+                raw = "http://\(raw)"
+            }
+            if let url = URL(string: raw) {
+                NSWorkspace.shared.open(url)
+            }
+        case .command:
+            let escaped = item.target
+                .replacingOccurrences(of: "\\", with: "\\\\")
+                .replacingOccurrences(of: "\"", with: "\\\"")
+            let script = """
+            tell application "Terminal"
+                activate
+                do script "\(escaped)"
+            end tell
+            """
+            Task.detached(priority: .userInitiated) {
+                let proc = Process()
+                proc.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+                proc.arguments = ["-e", script]
+                try? proc.run()
+            }
+        }
+    }
+
+    func isQuickAppRunning(_ item: QuickAppItem) -> Bool {
+        guard item.kind == .app else { return false }
+        let targetStd = URL(fileURLWithPath: item.target).standardizedFileURL.path
+        return NSWorkspace.shared.runningApplications.contains {
+            $0.bundleURL?.standardizedFileURL.path == targetStd
+        }
+    }
+
+    func pickQuickAppsWithOpenPanel() {
+        isPinnedOpen = true
+        let panel = NSOpenPanel()
+        panel.title = "Add App or Project Folder to NotchHub"
+        panel.prompt = "Add to Notch"
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = true
+        panel.treatsFilePackagesAsDirectories = false
+        panel.directoryURL = URL(fileURLWithPath: "/Applications", isDirectory: true)
+
+        NSApp.activate(ignoringOtherApps: true)
+        if panel.runModal() == .OK {
+            for url in panel.urls {
+                addQuickAppFromURL(url)
+            }
+        }
+        isPinnedOpen = false
+        openTab(.home)
+    }
+
+    func addQuickAppFromURL(_ url: URL) {
+        let path = url.standardizedFileURL.path
+        let isApp = url.pathExtension.lowercased() == "app"
+        let cleanName = isApp
+            ? url.deletingPathExtension().lastPathComponent
+            : url.lastPathComponent
+        quickAppStore.add(
+            QuickAppItem(
+                name: cleanName,
+                kind: isApp ? .app : .folder,
+                target: path
+            )
+        )
+    }
+
+    func addCustomQuickApp() {
+        let name = newQuickAppName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let target = newQuickAppTarget.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, !target.isEmpty else { return }
+
+        quickAppStore.add(
+            QuickAppItem(
+                name: name,
+                kind: newQuickAppKind,
+                target: target
+            )
+        )
+        newQuickAppName = ""
+        newQuickAppTarget = ""
+        isAddingQuickApp = false
+    }
+
+    private static func discoverDefaultQuickApps() -> [QuickAppItem] {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let candidates: [(name: String, kind: QuickAppKind, path: String)] = [
+            ("Antigravity", .app, "/Applications/Antigravity.app"),
+            ("FilmCraft", .app, "/Applications/FilmCraft.app"),
+            ("EffectCraft", .app, "/Applications/EffectCraft.app"),
+            ("Blender", .app, "\(home)/Applications/Blender.app"),
+            ("Blender", .app, "/Applications/Blender.app"),
+            ("Claude", .app, "/Applications/Claude.app"),
+            ("ChatGPT", .app, "/Applications/ChatGPT.app"),
+            ("Salab", .app, "\(home)/Applications/Salab.app"),
+            ("AI-Team", .folder, "\(home)/Desktop/AI-Team-Projects")
+        ]
+        var seen = Set<String>()
+        var out: [QuickAppItem] = []
+        for c in candidates {
+            if !seen.contains(c.name), FileManager.default.fileExists(atPath: c.path) {
+                seen.insert(c.name)
+                out.append(QuickAppItem(name: c.name, kind: c.kind, target: c.path))
+            }
+        }
+        return out
     }
 
     private func setupWindow() {

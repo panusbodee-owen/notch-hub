@@ -136,7 +136,23 @@ func runAllTests() throws {
     check(L10n(.ja).tabTitle(.home) == "ホーム", "JA tab title mismatch")
     print("[PASS] testThreeLanguageLocalization")
 
-    print("\nAll 9 NotchHubCore self-tests passed!")
+    // 10. QuickAppStore add / dedupe / move / persistence
+    let qaFile = FileManager.default.temporaryDirectory
+        .appendingPathComponent("notchhub_qa_\(UUID().uuidString).json")
+    defer { try? FileManager.default.removeItem(at: qaFile) }
+    let qaStore = QuickAppStore(storageURL: qaFile)
+    qaStore.add(QuickAppItem(name: "AI Power Ranger", kind: .url, target: "http://localhost:3000"))
+    qaStore.add(QuickAppItem(name: "FilmCraft", kind: .app, target: "/Applications/FilmCraft.app"))
+    qaStore.add(QuickAppItem(name: "AI Power Ranger v2", kind: .url, target: "http://localhost:3000")) // dedupe same target
+    check(qaStore.items.count == 2, "quick apps should deduplicate identical kind+target")
+    check(qaStore.items[0].name == "AI Power Ranger v2", "duplicate should update name")
+    qaStore.move(id: qaStore.items[1].id, offset: -1)
+    check(qaStore.items[0].name == "FilmCraft", "move should reorder items")
+    let qaReloaded = QuickAppStore(storageURL: qaFile)
+    check(qaReloaded.items.count == 2, "quick apps must persist to disk")
+    print("[PASS] testQuickAppStore")
+
+    print("\nAll 10 NotchHubCore self-tests passed!")
 }
 
 @main

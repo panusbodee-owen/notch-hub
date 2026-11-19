@@ -1,6 +1,7 @@
 import AppKit
 import NotchHubCore
 import SwiftUI
+import UniformTypeIdentifiers
 
 private let gadgetCardFill = Color(red: 0.085, green: 0.088, blue: 0.102)
 private let gadgetCardBorder = Color.white.opacity(0.095)
@@ -74,6 +75,7 @@ struct HomeWidgetView: View {
     @ObservedObject var activities: LiveActivityStore
     @ObservedObject var captures: ScreenshotTrayStore
     @ObservedObject var aiDiscovery: AIDiscoveryService
+    @ObservedObject var quickApps: QuickAppStore
 
     init(coordinator: NotchCoordinator) {
         self.coordinator = coordinator
@@ -84,6 +86,7 @@ struct HomeWidgetView: View {
         self.activities = coordinator.activityStore
         self.captures = coordinator.screenshotStore
         self.aiDiscovery = coordinator.aiDiscovery
+        self.quickApps = coordinator.quickAppStore
     }
 
     private var l10n: L10n {
@@ -164,6 +167,9 @@ struct HomeWidgetView: View {
             } else {
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 10) {
+                        if activeGadgets.contains(.quickApps) {
+                            quickAppsStripGadget
+                        }
                         if activeGadgets.contains(.captures) {
                             capturesStripGadget
                         }
@@ -259,6 +265,249 @@ struct HomeWidgetView: View {
             }
         }
         .padding(.vertical, 2)
+    }
+
+    // MARK: - Quick Apps Dock & Add App Gadget
+
+    private var quickAppsStripGadget: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 6) {
+                Label(l10n.quickAppsTitle, systemImage: "square.grid.2x2.fill")
+                    .font(.system(size: 11.5, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.95))
+
+                Spacer()
+
+                if !quickApps.items.isEmpty {
+                    Button(coordinator.isEditingQuickApps ? l10n.done : "Edit") {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            coordinator.isEditingQuickApps.toggle()
+                        }
+                    }
+                    .font(.system(size: 9.5, weight: .semibold))
+                    .foregroundStyle(coordinator.isEditingQuickApps ? .green : .white.opacity(0.55))
+                    .buttonStyle(.plain)
+                }
+
+                Button {
+                    withAnimation(.easeInOut(duration: 0.16)) {
+                        coordinator.isAddingQuickApp.toggle()
+                    }
+                } label: {
+                    HStack(spacing: 3) {
+                        Image(systemName: coordinator.isAddingQuickApp ? "xmark" : "plus")
+                            .font(.system(size: 9, weight: .bold))
+                        Text(l10n.addApp)
+                            .font(.system(size: 9.5, weight: .semibold, design: .rounded))
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.purple.opacity(0.24), in: Capsule())
+                    .overlay(Capsule().stroke(Color.purple.opacity(0.55), lineWidth: 0.8))
+                    .foregroundStyle(.white)
+                }
+                .buttonStyle(.plain)
+            }
+
+            // Inline Add App / Project / URL / Command panel
+            if coordinator.isAddingQuickApp {
+                VStack(spacing: 6) {
+                    HStack(spacing: 6) {
+                        Button {
+                            coordinator.pickQuickAppsWithOpenPanel()
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "folder.badge.plus")
+                                    .font(.system(size: 10))
+                                Text(l10n.pickFromMac)
+                                    .font(.system(size: 10, weight: .semibold))
+                            }
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 4.5)
+                            .background(Color.cyan.opacity(0.22), in: Capsule())
+                            .overlay(Capsule().stroke(Color.cyan.opacity(0.55), lineWidth: 0.8))
+                            .foregroundStyle(.cyan)
+                        }
+                        .buttonStyle(.plain)
+
+                        Spacer()
+
+                        ForEach([QuickAppKind.url, QuickAppKind.command, QuickAppKind.folder], id: \.id) { kind in
+                            let selected = coordinator.newQuickAppKind == kind
+                            Button(kind.rawValue.uppercased()) {
+                                coordinator.newQuickAppKind = kind
+                            }
+                            .font(.system(size: 8.5, weight: .bold, design: .rounded))
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(selected ? Color.white.opacity(0.22) : Color.white.opacity(0.06), in: Capsule())
+                            .foregroundStyle(selected ? .white : .white.opacity(0.55))
+                            .buttonStyle(.plain)
+                        }
+                    }
+
+                    HStack(spacing: 6) {
+                        TextField("Name (e.g. AI Power Ranger)", text: $coordinator.newQuickAppName)
+                            .textFieldStyle(.plain)
+                            .font(.system(size: 10.5))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 5)
+                            .background(Color.black.opacity(0.45), in: RoundedRectangle(cornerRadius: 8))
+                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.12), lineWidth: 0.8))
+                            .frame(maxWidth: 185)
+
+                        TextField(
+                            coordinator.newQuickAppKind == .url
+                                ? "http://localhost:3000"
+                                : (coordinator.newQuickAppKind == .command ? "cd ~/project && npm run dev" : "~/Desktop/MyProject"),
+                            text: $coordinator.newQuickAppTarget
+                        )
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 10.5, design: .monospaced))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(Color.black.opacity(0.45), in: RoundedRectangle(cornerRadius: 8))
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.12), lineWidth: 0.8))
+
+                        Button(l10n.addCustomAction) {
+                            coordinator.addCustomQuickApp()
+                        }
+                        .font(.system(size: 10, weight: .bold))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color.green.opacity(0.82), in: RoundedRectangle(cornerRadius: 8))
+                        .foregroundStyle(.black)
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(8)
+                .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 10))
+            }
+
+            // Horizontal Dock of Quick Apps
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(quickApps.items) { item in
+                        quickAppTile(item)
+                    }
+                }
+                .padding(.vertical, 1)
+            }
+        }
+        .padding(11)
+        .background(gadgetCardFill, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(gadgetCardBorder, lineWidth: 1))
+        .onDrop(of: [UTType.fileURL], isTargeted: nil) { providers in
+            handleQuickAppDrop(providers)
+        }
+    }
+
+    private func quickAppTile(_ item: QuickAppItem) -> some View {
+        let running = coordinator.isQuickAppRunning(item)
+        return ZStack(alignment: .topTrailing) {
+            Button {
+                coordinator.launchQuickApp(item)
+            } label: {
+                VStack(spacing: 4) {
+                    ZStack(alignment: .bottomTrailing) {
+                        if item.kind == .app || item.kind == .folder {
+                            let expanded = (item.target as NSString).expandingTildeInPath
+                            Image(nsImage: NSWorkspace.shared.icon(forFile: expanded))
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 30, height: 30)
+                        } else {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(
+                                        LinearGradient(
+                                            colors: item.kind == .url
+                                                ? [Color.cyan.opacity(0.45), Color.blue.opacity(0.35)]
+                                                : [Color.purple.opacity(0.50), Color.indigo.opacity(0.38)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                                    .frame(width: 30, height: 30)
+                                Image(systemName: item.iconSymbol ?? item.kind.symbolName)
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(.white)
+                            }
+                        }
+
+                        if running {
+                            Circle()
+                                .fill(Color(red: 0.22, green: 0.94, blue: 0.54))
+                                .frame(width: 6.5, height: 6.5)
+                                .shadow(color: .green.opacity(0.9), radius: 3)
+                        }
+                    }
+
+                    Text(item.name)
+                        .font(.system(size: 9.5, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.9))
+                        .lineLimit(1)
+                }
+                .frame(width: 68, height: 54)
+                .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 11))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 11)
+                        .stroke(running ? Color.green.opacity(0.35) : Color.white.opacity(0.08), lineWidth: 0.9)
+                )
+            }
+            .buttonStyle(.plain)
+            .help("\(item.name) — \(item.target)")
+
+            if coordinator.isEditingQuickApps {
+                HStack(spacing: 1) {
+                    Button {
+                        quickApps.move(id: item.id, offset: -1)
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 7.5, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(3)
+                            .background(Color.black.opacity(0.75), in: Circle())
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        quickApps.remove(id: item.id)
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 7.5, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(3)
+                            .background(Color.red.opacity(0.85), in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(2)
+            }
+        }
+    }
+
+    private func handleQuickAppDrop(_ providers: [NSItemProvider]) -> Bool {
+        var handled = false
+        for provider in providers {
+            if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
+                handled = true
+                provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { item, _ in
+                    var resolvedURL: URL?
+                    if let data = item as? Data {
+                        resolvedURL = URL(dataRepresentation: data, relativeTo: nil)
+                    } else if let url = item as? URL {
+                        resolvedURL = url
+                    }
+                    if let url = resolvedURL {
+                        Task { @MainActor in
+                            coordinator.addQuickAppFromURL(url)
+                        }
+                    }
+                }
+            }
+        }
+        return handled
     }
 
     // MARK: - 5-Slot Recent Captures Gadget
@@ -417,7 +666,7 @@ struct HomeWidgetView: View {
     @ViewBuilder
     private func gadgetCard(for kind: HomeGadgetKind) -> some View {
         switch kind {
-        case .captures:
+        case .captures, .quickApps:
             EmptyView()
         case .aiRadar:
             aiRadarCard
