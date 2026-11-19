@@ -130,7 +130,13 @@ func runAllTests() throws {
     check(detected == Set(["OPENAI_API_KEY", "GEMINI_API_KEY"]), "shell key scanner mismatch: \(detected)")
     print("[PASS] testAIShellKeyScanner")
 
-    print("\nAll 8 NotchHubCore self-tests passed!")
+    // 9. Localization (EN / TH / JA)
+    check(L10n(.en).tabTitle(.home) == "Home", "EN tab title mismatch")
+    check(L10n(.th).tabTitle(.home) == "หน้าหลัก", "TH tab title mismatch")
+    check(L10n(.ja).tabTitle(.home) == "ホーム", "JA tab title mismatch")
+    print("[PASS] testThreeLanguageLocalization")
+
+    print("\nAll 9 NotchHubCore self-tests passed!")
 }
 
 @main

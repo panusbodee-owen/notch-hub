@@ -327,6 +327,7 @@ public struct NotchSettings: Codable, Equatable, Sendable {
     public var homeGadgets: [HomeGadgetKind] = [.captures, .aiRadar, .media, .timer, .system]
     public var maxScreenshots: Int = 5
     public var scratchpadText: String = ""
+    public var language: AppLanguage = .en
 
     public init() {}
 
@@ -349,5 +350,6 @@ public struct NotchSettings: Codable, Equatable, Sendable {
             ?? [.captures, .aiRadar, .media, .timer, .system]
         self.maxScreenshots = try c.decodeIfPresent(Int.self, forKey: .maxScreenshots) ?? 5
         self.scratchpadText = try c.decodeIfPresent(String.self, forKey: .scratchpadText) ?? ""
+        self.language = try c.decodeIfPresent(AppLanguage.self, forKey: .language) ?? .en
     }
 }

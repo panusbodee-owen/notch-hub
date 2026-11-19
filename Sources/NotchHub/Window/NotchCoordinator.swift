@@ -181,6 +181,10 @@ final class NotchCoordinator: ObservableObject {
         }
     }
 
+    var l10n: L10n {
+        L10n(settingsStore.settings.language)
+    }
+
     var currentGeometry: NotchGeometry {
         let screen = NSScreen.main ?? NSScreen.screens.first
         let metrics = ScreenMetrics(

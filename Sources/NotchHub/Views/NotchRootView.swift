@@ -200,7 +200,7 @@ struct NotchRootView: View {
                         HStack(spacing: 4) {
                             Image(systemName: tab.symbolName)
                                 .font(.system(size: 10, weight: .semibold))
-                            Text(tab.rawValue)
+                            Text(coordinator.l10n.tabTitle(tab))
                                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                             if tab == .shelf && !coordinator.shelfStore.items.isEmpty {
                                 Text("\(coordinator.shelfStore.items.count)")

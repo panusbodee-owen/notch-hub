@@ -11,19 +11,21 @@ struct ShelfWidgetView: View {
         self.shelf = coordinator.shelfStore
     }
 
+    private var l10n: L10n { coordinator.l10n }
+
     var body: some View {
         VStack(spacing: 8) {
             HStack {
-                Label("File Drop Shelf", systemImage: "tray.and.arrow.down.fill")
+                Label(l10n.shelfTitle, systemImage: "tray.and.arrow.down.fill")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.9))
-                Text("ลากไฟล์มาวางพัก หรือลากออกไปใส่ FilmCraft / EffectCraft / Finder")
+                Text(l10n.shelfHint)
                     .font(.system(size: 10))
                     .foregroundStyle(.white.opacity(0.5))
                     .lineLimit(1)
                 Spacer()
                 if !shelf.items.isEmpty {
-                    Button("Clear") {
+                    Button(l10n.clear) {
                         shelf.clear()
                     }
                     .font(.system(size: 10, weight: .semibold))
@@ -37,7 +39,7 @@ struct ShelfWidgetView: View {
                     Image(systemName: "arrow.down.doc.fill")
                         .font(.system(size: 24))
                         .foregroundStyle(coordinator.isDropTargeted ? .cyan : .white.opacity(0.4))
-                    Text("Drop files, clips, or images here")
+                    Text(l10n.shelfEmpty)
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.white.opacity(0.75))
                     Text("Tip: Drag any file to the top center of your screen to auto-open this shelf.")

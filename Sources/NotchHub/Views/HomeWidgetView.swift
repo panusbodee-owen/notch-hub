@@ -23,6 +23,10 @@ struct HomeWidgetView: View {
         self.aiDiscovery = coordinator.aiDiscovery
     }
 
+    private var l10n: L10n {
+        L10n(settingsStore.settings.language)
+    }
+
     private var activeGadgets: [HomeGadgetKind] {
         settingsStore.settings.homeGadgets
     }
@@ -41,7 +45,7 @@ struct HomeWidgetView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "camera.viewfinder")
                             .font(.system(size: 10, weight: .bold))
-                        Text("Cap Screen")
+                        Text(l10n.capScreen)
                             .font(.system(size: 10, weight: .semibold, design: .rounded))
                     }
                     .padding(.horizontal, 8)
@@ -52,7 +56,7 @@ struct HomeWidgetView: View {
                 .buttonStyle(.plain)
                 .help("Capture screen region directly into your 5-shot tray")
 
-                Text("Cap ด้วย Cmd+Shift+4 / Ctrl+Cmd+Shift+4 รูปจะเข้าอัตโนมัติ")
+                Text(l10n.capHint)
                     .font(.system(size: 9.5))
                     .foregroundStyle(.white.opacity(0.45))
                     .lineLimit(1)
@@ -67,7 +71,7 @@ struct HomeWidgetView: View {
                     HStack(spacing: 4) {
                         Image(systemName: coordinator.isEditingHomeGadgets ? "checkmark" : "plus.square.on.square")
                             .font(.system(size: 10, weight: .bold))
-                        Text(coordinator.isEditingHomeGadgets ? "Done" : "Gadgets")
+                        Text(coordinator.isEditingHomeGadgets ? l10n.done : l10n.gadgets)
                             .font(.system(size: 10, weight: .semibold, design: .rounded))
                     }
                     .padding(.horizontal, 8)
@@ -146,7 +150,7 @@ struct HomeWidgetView: View {
                                 Image(systemName: isOn ? "checkmark.circle.fill" : "plus.circle")
                                     .font(.system(size: 10))
                                     .foregroundStyle(isOn ? .cyan : .white.opacity(0.5))
-                                Text(kind.displayName)
+                                Text(l10n.gadgetName(kind))
                                     .font(.system(size: 10, weight: .semibold))
                                     .foregroundStyle(isOn ? .white : .white.opacity(0.6))
                             }
@@ -194,11 +198,11 @@ struct HomeWidgetView: View {
     private var capturesStripGadget: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Label("Recent Captures (\(captures.items.count)/\(captures.maxItems))", systemImage: "photo.on.rectangle.angled")
+                Label("\(l10n.recentCaptures) (\(captures.items.count)/\(captures.maxItems))", systemImage: "photo.on.rectangle.angled")
                     .font(.system(size: 10.5, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.9))
 
-                Text("ลากไปวางในแอป/ไฟล์ หรือคลิกเพื่อ Copy รูป")
+                Text(l10n.captureDragHint)
                     .font(.system(size: 9.5))
                     .foregroundStyle(.white.opacity(0.45))
                     .lineLimit(1)
@@ -206,7 +210,7 @@ struct HomeWidgetView: View {
                 Spacer()
 
                 if !captures.items.isEmpty {
-                    Button("Clear") {
+                    Button(l10n.clear) {
                         captures.clear()
                     }
                     .font(.system(size: 9.5, weight: .semibold))
@@ -262,7 +266,7 @@ struct HomeWidgetView: View {
                     .frame(height: 68)
 
                     HStack(spacing: 3) {
-                        Text(isCopied ? "Copied!" : item.displayName)
+                        Text(isCopied ? l10n.copied : item.displayName)
                             .font(.system(size: 8.5, weight: isCopied ? .bold : .medium))
                             .foregroundStyle(isCopied ? .green : .white.opacity(0.9))
                             .lineLimit(1)
@@ -363,7 +367,7 @@ struct HomeWidgetView: View {
     private var aiRadarCard: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Label("AI on This Mac", systemImage: "brain.head.profile")
+                Label(l10n.aiOnThisMac, systemImage: "brain.head.profile")
                     .font(.system(size: 10.5, weight: .semibold))
                     .foregroundStyle(.purple)
                 Spacer()

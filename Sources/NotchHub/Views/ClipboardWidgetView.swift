@@ -13,12 +13,12 @@ struct ClipboardWidgetView: View {
     var body: some View {
         VStack(spacing: 8) {
             HStack {
-                Label("Clipboard & Prompt Snippets", systemImage: "doc.on.clipboard.fill")
+                Label(coordinator.l10n.clipboardTitle, systemImage: "doc.on.clipboard.fill")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.9))
                 Spacer()
                 if !store.entries.isEmpty {
-                    Button("Clear Unpinned") {
+                    Button(coordinator.l10n.clearUnpinned) {
                         store.clearUnpinned()
                     }
                     .font(.system(size: 10, weight: .semibold))

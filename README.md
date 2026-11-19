@@ -1,55 +1,87 @@
-# NotchHub — Native macOS Dynamic Island (Productivity + AI & Creator Hub)
+<p align="center">
+  <strong>English</strong> &nbsp;|&nbsp;
+  <a href="./README.th.md">ภาษาไทย</a> &nbsp;|&nbsp;
+  <a href="./README.ja.md">日本語</a>
+</p>
 
-แอป **NotchHub** เขียนด้วย **Swift + SwiftUI + AppKit (`NSPanel`)** แบบ Native macOS (Apple Silicon) เปลี่ยนรอยบากบน MacBook (หรือ Floating Pill บนจอนอก) ให้เป็นศูนย์รวม Gadget, ถาดเก็บรูป Cap อัตโนมัติ, File Shelf และ AI Radar
+<h1 align="center">NotchHub</h1>
+
+<p align="center">
+  <strong>Native macOS Dynamic Island — Modular Gadgets, 5-Slot Screenshot Tray, File Drop Shelf &amp; AI Radar</strong><br/>
+  Built with pure Swift, SwiftUI &amp; AppKit (<code>NSPanel</code>) for macOS 14+ (Apple Silicon) • ~1 MB download • Ultra-lightweight
+</p>
+
+<p align="center">
+  <a href="https://github.com/panusbodee-owen/notch-hub/releases/latest/download/NotchHub-macOS-arm64.dmg"><strong>Download .dmg (macOS Installer)</strong></a> &nbsp;•&nbsp;
+  <a href="https://github.com/panusbodee-owen/notch-hub/releases/latest/download/NotchHub-macOS-arm64.zip"><strong>Download .zip (Direct Archive)</strong></a> &nbsp;•&nbsp;
+  <a href="https://github.com/panusbodee-owen/notch-hub/releases/latest"><strong>All Releases</strong></a>
+</p>
+
+<p align="center">
+  <img src="./docs/images/hero-banner.jpg" alt="NotchHub Hero Banner — macOS Dynamic Island with Recent Captures and AI Gadgets" width="100%" />
+</p>
 
 ---
 
-## Download ตรงๆ (Direct Download)
+## Direct Download & 1-Line Install
 
-- **macOS Installer (`.dmg` — ลากใส่ Applications ได้เลย):**  
-  [Download NotchHub-macOS-arm64.dmg](https://github.com/panusbodee-owen/notch-hub/releases/latest/download/NotchHub-macOS-arm64.dmg)
-- **macOS Archive (`.zip` — แตกไฟล์แล้วเปิดใช้ได้ทันที):**  
-  [Download NotchHub-macOS-arm64.zip](https://github.com/panusbodee-owen/notch-hub/releases/latest/download/NotchHub-macOS-arm64.zip)
-- **หน้า Releases ทั้งหมด:**  
-  https://github.com/panusbodee-owen/notch-hub/releases/latest
+- **macOS Installer (`.dmg` — drag into Applications):**  
+  https://github.com/panusbodee-owen/notch-hub/releases/latest/download/NotchHub-macOS-arm64.dmg
+- **macOS Archive (`.zip` — unzip and launch):**  
+  https://github.com/panusbodee-owen/notch-hub/releases/latest/download/NotchHub-macOS-arm64.zip
 
-### ติดตั้งผ่าน Terminal แบบ 1 บรรทัด
+### One-Line Terminal Install
 ```bash
 curl -fL "https://github.com/panusbodee-owen/notch-hub/releases/latest/download/NotchHub-macOS-arm64.zip" -o /tmp/NotchHub.zip && ditto -xk /tmp/NotchHub.zip /Applications && xattr -dr com.apple.quarantine /Applications/NotchHub.app && open /Applications/NotchHub.app
 ```
 
-> **หมายเหตุครั้งแรกที่เปิดแอป (macOS Gatekeeper):** เนื่องจากแอปยังไม่ได้ Notarize ผ่าน Apple Developer Account หากโหลดจากเบราว์เซอร์แล้ว macOS แจ้งเตือน ให้รันคำสั่งนี้ 1 ครั้งแล้วเปิดใหม่:
+> **First-launch note (macOS Gatekeeper):** Because builds are ad-hoc signed without paid Apple Developer notarization, if macOS shows a warning after downloading via browser, run once:
 > ```bash
 > xattr -dr com.apple.quarantine /Applications/NotchHub.app
 > ```
 
 ---
 
-## ฟีเจอร์เด่นทั้งหมด
+## Visual Overview
 
-- **3-State Dynamic Notch & ปรับขนาดได้อิสระ:**
-  - `Closed` / `Compact Wings` / `Expanded` ลอยเหนือ Menu Bar & Full-Screen โดยไม่แย่ง Focus
-  - ลากมุมขวาล่าง (`↖↘`) ปรับขนาดกว้าง-สูงได้สดๆ หรือเลือก Preset **`S / M / L / XL`** + สไลเดอร์ในแท็บ **Settings**
-- **Home แบบเลือกใส่ Gadget เองได้:**
-  - กดปุ่ม **`Gadgets`** บนหน้า Home เพื่อเพิ่ม/ลบ/สลับตำแหน่ง: **Recent Captures (5)**, **My AIs Radar**, **Media**, **AI Jobs**, **Timer**, **System HUD**, **Quick Note**, **Clock**
-- **ถาดเก็บรูป Cap อัตโนมัติ 5 รูป:**
-  - จับอัตโนมัติทั้ง `Cmd+Shift+3/4/5` (ลงไฟล์), `Ctrl+Cmd+Shift+3/4` (ลง Clipboard) หรือกดปุ่ม **`Cap Screen`** บน Notch
-  - ลากรูปจาก Thumbnail ไปวางในแอป/ไฟล์ต่างๆ หรือคลิก 1 ทีเพื่อ Copy รูปไป `Cmd+V` ได้ทันที
-- **AI Radar (สแกน AI ทั้งเครื่อง — Desktop App, CLI, API):**
-  - ตรวจจับ Desktop Apps (Antigravity, Claude, ChatGPT, Cursor, Ollama ฯลฯ), CLI (`agy`, `codex`, `claude`, `gemini`, `ollama`, MCPs) และ Local/Cloud APIs พร้อมสถานะสดและปุ่มกดเปิด/รัน/Copy
-- **File Drop Shelf:** ลากไฟล์/คลิปขึ้นด้านบนกลางจอเพื่อพักไว้ แล้วลากออกไปวางใส่ FilmCraft, EffectCraft, Blender หรือ Finder
-- **Local Live Activity HTTP API (`http://127.0.0.1:47890`):** ยิงสถานะ AI Agent หรือแถบ Progress งาน Render ขึ้น Notch ได้ทันที
-- **Clipboard History & Quick Camera Mirror:** เก็บประวัติข้อความ/Prompt ปักหมุดได้ และเปิดกล้องเช็กหน้า/ไฟใน 1 คลิก
+### 3-State Dynamic Notch & Drag-and-Drop Workflow
+<p align="center">
+  <img src="./docs/images/notch-states.jpg" alt="NotchHub 3 States: Closed, Compact Wings, Expanded Hub" width="100%" />
+</p>
+
+### AI Radar & Live Jobs Hub (Desktop Apps • CLI • Local & Cloud APIs)
+<p align="center">
+  <img src="./docs/images/ai-radar.jpg" alt="NotchHub AI Radar showing Desktop Apps, CLI tools, and APIs" width="100%" />
+</p>
 
 ---
 
-## ส่งสถานะ AI / งาน Render ขึ้น Notch ผ่าน Local API
+## Key Features
+
+- **3-State Dynamic Notch + Live Resizing:**
+  - Seamlessly blends into the MacBook hardware notch (`Closed`), shows subtle status wings (`Compact`), and expands smoothly on hover/click (`Expanded`) over full-screen apps without stealing focus.
+  - **Adjustable size:** Drag the bottom-right corner (`↖↘`) symmetrically in real time, pick **`S / M / L / XL`** presets, or fine-tune width, height, and compact wing width in **Settings**.
+  - **Built-in 3-Language UI:** Switch instantly between **`EN` / `ไทย` / `日本語`** inside Settings.
+- **Customizable Home Gadgets:**
+  - Click **`Gadgets`** on the Home tab to add, remove, or reorder: **Recent Captures (5)**, **My AIs Radar**, **Media**, **AI Jobs**, **Timer**, **System HUD**, **Quick Note**, and **Clock**.
+- **Auto 5-Slot Screenshot Tray:**
+  - Automatically captures your latest 5 screenshots from `Cmd+Shift+3/4/5` (saved to disk), `Ctrl+Cmd+Shift+3/4` (copied to clipboard), or the 1-click **`Cap Screen`** button.
+  - Drag thumbnails directly into **FilmCraft, EffectCraft, Figma, Finder, Slack, Docs, or Browsers**, or click once to copy the image for instant `Cmd+V`.
+- **AI Radar (Desktop Apps • CLI • APIs):**
+  - Automatically scans this Mac for AI **Desktop Apps** (Antigravity, Claude, ChatGPT, Cursor, Ollama, LM Studio, etc.), **CLIs** (`agy`, `codex`, `claude`, `gemini`, `ollama`, MCP servers), and **Local/Cloud APIs** (ports + safely checking key presence without reading secret values) with 1-click Open / Run / Copy.
+- **File Drop Shelf, Clipboard History & Camera Mirror:**
+  - Drag any file to the top-center of your screen to auto-open the File Drop Shelf; keep pinned clipboard/prompt snippets; check your camera/lighting in 1 click.
+
+---
+
+## Push Live AI / Render Progress via Local HTTP API
+
+NotchHub listens strictly on loopback (`http://127.0.0.1:47890`) so AI agents, MCP servers, or render scripts can stream live progress straight into your Notch:
 
 ```bash
 ./scripts/notch-notify.sh yt-1 "yt-creative-mcp" running "Analyzing YouTube Edit" "Detecting cuts & 124 BPM" 0.68
 ```
 
-หรือด้วย `curl`:
 ```bash
 curl -X POST http://127.0.0.1:47890/v1/activity \
   -H 'Content-Type: application/json' \
@@ -58,7 +90,7 @@ curl -X POST http://127.0.0.1:47890/v1/activity \
 
 ---
 
-## Build จาก Source (macOS 14+ / Apple Silicon)
+## Build From Source (macOS 14+ / Apple Silicon)
 
 ```bash
 git clone https://github.com/panusbodee-owen/notch-hub.git
@@ -67,3 +99,7 @@ swift run NotchHubSelfTest
 ./scripts/package_release.sh
 open dist/NotchHub.app
 ```
+
+## License
+
+MIT — see [LICENSE](./LICENSE).

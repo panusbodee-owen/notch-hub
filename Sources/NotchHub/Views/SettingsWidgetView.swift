@@ -19,10 +19,33 @@ struct SettingsWidgetView: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            // Left: Modular Widget Toggles
+            // Left: Language Switcher + Modular Widget Toggles
             VStack(alignment: .leading, spacing: 6) {
-                Text("Modular Widgets")
-                    .font(.system(size: 11, weight: .bold))
+                Text(coordinator.l10n.languageLabel)
+                    .font(.system(size: 10.5, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.85))
+
+                HStack(spacing: 4) {
+                    ForEach(AppLanguage.allCases) { lang in
+                        let selected = settingsStore.settings.language == lang
+                        Button(lang.displayName) {
+                            settingsStore.settings.language = lang
+                        }
+                        .font(.system(size: 9.5, weight: .bold, design: .rounded))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(
+                            selected ? Color.cyan.opacity(0.85) : Color.white.opacity(0.1),
+                            in: Capsule()
+                        )
+                        .foregroundStyle(selected ? .black : .white.opacity(0.85))
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.bottom, 2)
+
+                Text(coordinator.l10n.modularWidgets)
+                    .font(.system(size: 10.5, weight: .bold))
                     .foregroundStyle(.white.opacity(0.85))
 
                 Toggle("Media Controls", isOn: $settingsStore.settings.enableMedia)
@@ -54,7 +77,7 @@ struct SettingsWidgetView: View {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text("Notch Size & Layout")
+                        Text(coordinator.l10n.notchSizeLayout)
                             .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(.white.opacity(0.85))
                         Spacer()
