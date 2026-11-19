@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <img src="./docs/images/hero-banner.jpg" alt="NotchHub Hero Banner — macOS Dynamic Island with Recent Captures and AI Gadgets" width="100%" />
+  <img src="./docs/images/hero-banner.png" alt="NotchHub Hero Banner — Real macOS SwiftUI Dynamic Island" width="100%" />
 </p>
 
 ---
@@ -46,12 +46,12 @@ curl -fL "https://github.com/panusbodee-owen/notch-hub/releases/latest/download/
 
 ### 3-State Dynamic Notch & Drag-and-Drop Workflow
 <p align="center">
-  <img src="./docs/images/notch-states.jpg" alt="NotchHub 3 States: Closed, Compact Wings, Expanded Hub" width="100%" />
+  <img src="./docs/images/notch-states.png" alt="NotchHub 3 States: Closed, Compact Wings, Expanded Hub" width="100%" />
 </p>
 
 ### AI Radar & Live Jobs Hub (Desktop Apps • CLI • Local & Cloud APIs)
 <p align="center">
-  <img src="./docs/images/ai-radar.jpg" alt="NotchHub AI Radar showing Desktop Apps, CLI tools, and APIs" width="100%" />
+  <img src="./docs/images/ai-radar.png" alt="NotchHub AI Radar showing Desktop Apps, CLI tools, and APIs" width="100%" />
 </p>
 
 ---

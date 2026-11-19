@@ -39,15 +39,15 @@ final class NotchCoordinator: ObservableObject {
     private var dragMonitor: Any?
     private var cancellables = Set<AnyCancellable>()
 
-    init() {
+    init(inMemoryOnly: Bool = false) {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
             .appendingPathComponent("NotchHub", isDirectory: true)
 
-        let sStore = SettingsStore(storageURL: appSupport.appendingPathComponent("settings.json"))
+        let sStore = SettingsStore(storageURL: inMemoryOnly ? nil : appSupport.appendingPathComponent("settings.json"))
         self.settingsStore = sStore
-        self.shelfStore = FileShelfStore(storageURL: appSupport.appendingPathComponent("shelf.json"))
+        self.shelfStore = FileShelfStore(storageURL: inMemoryOnly ? nil : appSupport.appendingPathComponent("shelf.json"))
         let capStore = ScreenshotTrayStore(
-            storageURL: appSupport.appendingPathComponent("captures.json"),
+            storageURL: inMemoryOnly ? nil : appSupport.appendingPathComponent("captures.json"),
             maxItems: sStore.settings.maxScreenshots
         )
         self.screenshotStore = capStore

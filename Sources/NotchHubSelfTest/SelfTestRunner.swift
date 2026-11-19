@@ -26,7 +26,7 @@ func runAllTests() throws {
     let compact = geo.panelFrame(for: .compact)
     check(compact.width > closed.width, "compact wings must be wider than closed notch")
     let expanded = geo.panelFrame(for: .expanded)
-    check(expanded.width == 680 && expanded.height == 360 && expanded.maxY == 982, "expanded frame dimensions mismatch")
+    check(expanded.width == 700 && expanded.height == 440 && expanded.maxY == 982, "expanded frame dimensions mismatch")
 
     // Custom adjustable dimensions + clamping
     let customGeo = NotchGeometry(

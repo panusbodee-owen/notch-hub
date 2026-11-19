@@ -2,6 +2,69 @@ import AppKit
 import NotchHubCore
 import SwiftUI
 
+private let gadgetCardFill = Color(red: 0.085, green: 0.088, blue: 0.102)
+private let gadgetCardBorder = Color.white.opacity(0.095)
+
+private struct CircularGaugeRing: View {
+    let progress: Double
+    let tint: Color
+    let iconName: String?
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(Color.white.opacity(0.14), lineWidth: 3.2)
+            Circle()
+                .trim(from: 0, to: CGFloat(min(1.0, max(0.02, progress))))
+                .stroke(tint, style: StrokeStyle(lineWidth: 3.2, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+            if let iconName {
+                Image(systemName: iconName)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.9))
+            }
+        }
+        .frame(width: 28, height: 28)
+    }
+}
+
+private struct AudioWaveformBars: View {
+    let isPlaying: Bool
+    let phase: Int
+
+    private let baseHeights: [CGFloat] = [
+        0.25, 0.45, 0.35, 0.72, 0.90, 0.55, 0.40, 0.85, 1.0, 0.68,
+        0.52, 0.92, 0.78, 0.44, 0.62, 0.84, 0.48, 0.36, 0.54, 0.28, 0.20
+    ]
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 2.5) {
+            ForEach(0..<baseHeights.count, id: \.self) { idx in
+                let raw = baseHeights[(idx + (isPlaying ? phase : 0)) % baseHeights.count]
+                let factor: CGFloat = isPlaying ? raw : max(0.18, raw * 0.42)
+                let isHighlight = isPlaying && idx >= 2 && idx <= 15
+                Capsule()
+                    .fill(
+                        isHighlight
+                            ? LinearGradient(
+                                colors: [Color(red: 0.28, green: 0.95, blue: 0.55), Color(red: 0.12, green: 0.78, blue: 0.45)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                            : LinearGradient(
+                                colors: [Color.white.opacity(0.28), Color.white.opacity(0.18)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                    )
+                    .frame(width: 2.8, height: max(4, 22 * factor))
+                    .shadow(color: isHighlight ? Color.green.opacity(0.45) : .clear, radius: 3)
+            }
+        }
+        .frame(height: 22)
+    }
+}
+
 struct HomeWidgetView: View {
     @ObservedObject var coordinator: NotchCoordinator
     @ObservedObject var settingsStore: SettingsStore
@@ -35,6 +98,10 @@ struct HomeWidgetView: View {
         activeGadgets.filter { !$0.isFullWidth }
     }
 
+    private var wavePhase: Int {
+        Int(coordinator.currentTime.timeIntervalSinceReferenceDate) % 21
+    }
+
     var body: some View {
         VStack(spacing: 8) {
             // Compact Home Toolbar: Quick Cap + Customize Gadgets
@@ -49,8 +116,9 @@ struct HomeWidgetView: View {
                             .font(.system(size: 10, weight: .semibold, design: .rounded))
                     }
                     .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Color.cyan.opacity(0.22), in: Capsule())
+                    .padding(.vertical, 3.5)
+                    .background(Color.cyan.opacity(0.18), in: Capsule())
+                    .overlay(Capsule().stroke(Color.cyan.opacity(0.45), lineWidth: 0.8))
                     .foregroundStyle(.cyan)
                 }
                 .buttonStyle(.plain)
@@ -58,7 +126,7 @@ struct HomeWidgetView: View {
 
                 Text(l10n.capHint)
                     .font(.system(size: 9.5))
-                    .foregroundStyle(.white.opacity(0.45))
+                    .foregroundStyle(.white.opacity(0.42))
                     .lineLimit(1)
 
                 Spacer()
@@ -75,9 +143,9 @@ struct HomeWidgetView: View {
                             .font(.system(size: 10, weight: .semibold, design: .rounded))
                     }
                     .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
+                    .padding(.vertical, 3.5)
                     .background(
-                        coordinator.isEditingHomeGadgets ? Color.green.opacity(0.28) : Color.white.opacity(0.1),
+                        coordinator.isEditingHomeGadgets ? Color.green.opacity(0.24) : Color.white.opacity(0.09),
                         in: Capsule()
                     )
                     .foregroundStyle(coordinator.isEditingHomeGadgets ? .green : .white.opacity(0.88))
@@ -85,7 +153,7 @@ struct HomeWidgetView: View {
                 .buttonStyle(.plain)
             }
 
-            // Inline Gadget Picker Bar (Add / Remove Gadgets on Home)
+            // Inline Gadget Picker Bar
             if coordinator.isEditingHomeGadgets {
                 gadgetCustomizerBar
             }
@@ -95,7 +163,7 @@ struct HomeWidgetView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 9) {
+                    VStack(spacing: 10) {
                         if activeGadgets.contains(.captures) {
                             capturesStripGadget
                         }
@@ -119,7 +187,7 @@ struct HomeWidgetView: View {
                                 Text("No gadgets on Home")
                                     .font(.system(size: 12, weight: .medium))
                                     .foregroundStyle(.white.opacity(0.65))
-                                Text("Click 'Gadgets' above to add Captures, Media, Timer, Notes, Clock, or HUD.")
+                                Text("Click 'Gadgets' above to add Captures, My AIs, Media, Timer, Notes, Clock, or HUD.")
                                     .font(.system(size: 10))
                                     .foregroundStyle(.white.opacity(0.45))
                             }
@@ -196,15 +264,18 @@ struct HomeWidgetView: View {
     // MARK: - 5-Slot Recent Captures Gadget
 
     private var capturesStripGadget: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Label("\(l10n.recentCaptures) (\(captures.items.count)/\(captures.maxItems))", systemImage: "photo.on.rectangle.angled")
-                    .font(.system(size: 10.5, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.9))
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 6) {
+                Text(l10n.recentCaptures)
+                    .font(.system(size: 11.5, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.95))
+                Text("(\(captures.items.count)/\(captures.maxItems))")
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.5))
 
-                Text(l10n.captureDragHint)
+                Text("•  \(l10n.captureDragHint)")
                     .font(.system(size: 9.5))
-                    .foregroundStyle(.white.opacity(0.45))
+                    .foregroundStyle(.white.opacity(0.38))
                     .lineLimit(1)
 
                 Spacer()
@@ -229,8 +300,9 @@ struct HomeWidgetView: View {
                 }
             }
         }
-        .padding(9)
-        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14))
+        .padding(11)
+        .background(gadgetCardFill, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(gadgetCardBorder, lineWidth: 1))
     }
 
     private func captureThumbnailCard(_ item: ScreenshotItem) -> some View {
@@ -245,13 +317,13 @@ struct HomeWidgetView: View {
                             .resizable()
                             .scaledToFill()
                             .frame(maxWidth: .infinity)
-                            .frame(height: 68)
+                            .frame(height: 66)
                             .clipped()
                     } else {
                         Rectangle()
                             .fill(Color.white.opacity(0.08))
                             .frame(maxWidth: .infinity)
-                            .frame(height: 68)
+                            .frame(height: 66)
                             .overlay(
                                 Image(systemName: "photo")
                                     .foregroundStyle(.white.opacity(0.4))
@@ -263,7 +335,7 @@ struct HomeWidgetView: View {
                         startPoint: .center,
                         endPoint: .bottom
                     )
-                    .frame(height: 68)
+                    .frame(height: 66)
 
                     HStack(spacing: 3) {
                         Text(isCopied ? l10n.copied : item.displayName)
@@ -272,13 +344,13 @@ struct HomeWidgetView: View {
                             .lineLimit(1)
                         Spacer(minLength: 0)
                     }
-                    .padding(.horizontal, 5)
+                    .padding(.horizontal, 6)
                     .padding(.bottom, 4)
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 9))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 9)
-                        .stroke(isCopied ? Color.green : Color.white.opacity(0.14), lineWidth: isCopied ? 1.5 : 1)
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(isCopied ? Color.green : Color.white.opacity(0.16), lineWidth: isCopied ? 1.5 : 1)
                 )
             }
             .buttonStyle(.plain)
@@ -291,8 +363,8 @@ struct HomeWidgetView: View {
                     Image(systemName: "folder.fill")
                         .font(.system(size: 8))
                         .foregroundStyle(.white)
-                        .padding(3)
-                        .background(Color.black.opacity(0.65), in: Circle())
+                        .padding(3.5)
+                        .background(Color.black.opacity(0.68), in: Circle())
                 }
                 .buttonStyle(.plain)
                 .help("Reveal in Finder")
@@ -304,12 +376,12 @@ struct HomeWidgetView: View {
                         .font(.system(size: 7.5, weight: .bold))
                         .foregroundStyle(.white)
                         .padding(3.5)
-                        .background(Color.black.opacity(0.65), in: Circle())
+                        .background(Color.black.opacity(0.68), in: Circle())
                 }
                 .buttonStyle(.plain)
                 .help("Remove from tray")
             }
-            .padding(3)
+            .padding(4)
         }
         .frame(maxWidth: .infinity)
         .onDrag {
@@ -324,16 +396,16 @@ struct HomeWidgetView: View {
             VStack(spacing: 3) {
                 Image(systemName: "plus.viewfinder")
                     .font(.system(size: 13))
-                    .foregroundStyle(.white.opacity(0.25))
+                    .foregroundStyle(.white.opacity(0.24))
                 Text("Cap \(index)")
                     .font(.system(size: 8.5, weight: .medium, design: .rounded))
                     .foregroundStyle(.white.opacity(0.3))
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 68)
+            .frame(height: 66)
             .background(
-                RoundedRectangle(cornerRadius: 9)
-                    .strokeBorder(Color.white.opacity(0.1), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(Color.white.opacity(0.11), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
             )
         }
         .buttonStyle(.plain)
@@ -364,181 +436,289 @@ struct HomeWidgetView: View {
         }
     }
 
+    /// 2x2 Glowing AI Pill Grid (matching the clean neon-border aesthetic)
     private var aiRadarCard: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Label(l10n.aiOnThisMac, systemImage: "brain.head.profile")
-                    .font(.system(size: 10.5, weight: .semibold))
-                    .foregroundStyle(.purple)
+                Text(l10n.aiOnThisMac)
+                    .font(.system(size: 11.5, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.94))
                 Spacer()
                 Button {
                     coordinator.selectedTab = .ai
                     coordinator.selectedAIFilter = "All"
                 } label: {
-                    Text("\(aiDiscovery.desktopApps.count) App • \(aiDiscovery.cliTools.count) CLI • \(aiDiscovery.apis.count) API")
+                    Text("\(aiDiscovery.desktopApps.count)A • \(aiDiscovery.cliTools.count)C • \(aiDiscovery.apis.count)P")
                         .font(.system(size: 9, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(.cyan)
+                        .foregroundStyle(.cyan.opacity(0.9))
                 }
                 .buttonStyle(.plain)
             }
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 5) {
-                    ForEach(aiDiscovery.items.prefix(6)) { item in
-                        Button {
-                            aiDiscovery.activate(item) { text in
-                                coordinator.clipboardMonitor.copyToPasteboard(text)
-                            }
-                        } label: {
-                            HStack(spacing: 4) {
-                                Circle()
-                                    .fill((item.status == .running || item.status == .online) ? Color.green : Color.cyan.opacity(0.7))
-                                    .frame(width: 5, height: 5)
-                                Text(item.name)
-                                    .font(.system(size: 9.5, weight: .semibold))
-                                    .foregroundStyle(.white.opacity(0.9))
-                                    .lineLimit(1)
-                            }
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 4)
-                            .background(Color.white.opacity(0.09), in: Capsule())
+            let topAIs = Array(aiDiscovery.items.prefix(4))
+            LazyVGrid(
+                columns: [
+                    GridItem(.flexible(), spacing: 7),
+                    GridItem(.flexible(), spacing: 7)
+                ],
+                spacing: 7
+            ) {
+                ForEach(topAIs) { item in
+                    let isLive = item.status == .running || item.status == .online
+                    let accent: Color = isLive ? Color(red: 0.25, green: 0.92, blue: 0.56) : Color(red: 0.18, green: 0.85, blue: 0.96)
+                    Button {
+                        aiDiscovery.activate(item) { text in
+                            coordinator.clipboardMonitor.copyToPasteboard(text)
                         }
-                        .buttonStyle(.plain)
-                        .help("\(item.category.rawValue): \(item.subtitle)")
+                    } label: {
+                        HStack(spacing: 5) {
+                            Text(item.name)
+                                .font(.system(size: 10.5, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.94))
+                                .lineLimit(1)
+                            Spacer(minLength: 2)
+                            Circle()
+                                .fill(accent)
+                                .frame(width: 6, height: 6)
+                                .shadow(color: accent.opacity(0.9), radius: 3)
+                        }
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 6)
+                        .background(accent.opacity(0.11), in: Capsule())
+                        .overlay(Capsule().stroke(accent.opacity(0.65), lineWidth: 1.1))
+                        .shadow(color: accent.opacity(0.22), radius: 5)
                     }
+                    .buttonStyle(.plain)
+                    .help("\(item.category.rawValue): \(item.subtitle)")
                 }
             }
         }
-        .padding(10)
-        .frame(maxWidth: .infinity, minHeight: 82, alignment: .topLeading)
-        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14))
+        .padding(11)
+        .frame(maxWidth: .infinity, minHeight: 102, alignment: .topLeading)
+        .background(gadgetCardFill, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(gadgetCardBorder, lineWidth: 1))
     }
 
+    /// Now Playing with Animated Green Waveform
     private var mediaCard: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
+            HStack {
+                Text("Now Playing")
+                    .font(.system(size: 11.5, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.94))
+                Spacer()
+                HStack(spacing: 10) {
+                    Button { media.previousTrack() } label: {
+                        Image(systemName: "backward.fill").font(.system(size: 10))
+                    }
+                    .buttonStyle(.plain)
+                    Button { media.playPause() } label: {
+                        Image(systemName: media.track.isPlaying ? "pause.fill" : "play.fill")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                    .buttonStyle(.plain)
+                    Button { media.nextTrack() } label: {
+                        Image(systemName: "forward.fill").font(.system(size: 10))
+                    }
+                    .buttonStyle(.plain)
+                }
+                .foregroundStyle(.white.opacity(0.78))
+            }
+
+            HStack(spacing: 9) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 8)
                         .fill(
                             LinearGradient(
-                                colors: media.track.isPlaying ? [.green.opacity(0.7), .teal.opacity(0.6)] : [.gray.opacity(0.35), .gray.opacity(0.2)],
+                                colors: media.track.isPlaying
+                                    ? [Color(red: 0.14, green: 0.65, blue: 0.50), Color(red: 0.08, green: 0.30, blue: 0.36)]
+                                    : [Color.white.opacity(0.14), Color.white.opacity(0.06)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
-                        .frame(width: 32, height: 32)
-                    Image(systemName: media.track.isPlaying ? "waveform" : "music.note")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.white)
+                        .frame(width: 28, height: 28)
+                    Image(systemName: media.track.isPlaying ? "music.note" : "play.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.9))
                 }
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 1.5) {
                     Text(media.track.title)
-                        .font(.system(size: 11.5, weight: .semibold))
+                        .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(.white)
                         .lineLimit(1)
-                    Text(media.track.artist.isEmpty ? (media.track.appName.isEmpty ? "Spotify / Music" : media.track.appName) : media.track.artist)
+                    Text(media.track.artist.isEmpty ? (media.track.appName.isEmpty ? "Spotify / Apple Music" : media.track.appName) : media.track.artist)
                         .font(.system(size: 9.5))
-                        .foregroundStyle(.white.opacity(0.6))
+                        .foregroundStyle(.white.opacity(0.55))
                         .lineLimit(1)
                 }
                 Spacer()
             }
 
-            HStack(spacing: 16) {
-                Spacer()
-                Button { media.previousTrack() } label: {
-                    Image(systemName: "backward.fill")
-                        .font(.system(size: 11))
-                }
-                .buttonStyle(.plain)
-
-                Button { media.playPause() } label: {
-                    Image(systemName: media.track.isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                        .font(.system(size: 20))
-                        .foregroundStyle(.white)
-                }
-                .buttonStyle(.plain)
-
-                Button { media.nextTrack() } label: {
-                    Image(systemName: "forward.fill")
-                        .font(.system(size: 11))
-                }
-                .buttonStyle(.plain)
-                Spacer()
-            }
-            .foregroundStyle(.white.opacity(0.85))
+            AudioWaveformBars(isPlaying: media.track.isPlaying, phase: wavePhase)
+                .frame(maxWidth: .infinity, alignment: .center)
         }
-        .padding(10)
-        .frame(maxWidth: .infinity, minHeight: 82, alignment: .topLeading)
-        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14))
+        .padding(11)
+        .frame(maxWidth: .infinity, minHeight: 102, alignment: .topLeading)
+        .background(gadgetCardFill, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(gadgetCardBorder, lineWidth: 1))
     }
 
+    /// Big Crisp Focus Timer + Vibrant Orange Play Circle
     private var timerCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Image(systemName: "timer")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.orange)
-                Text(timer.formattedRemaining)
-                    .font(.system(size: 16, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.white)
+                Text("Focus Timer")
+                    .font(.system(size: 11.5, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.94))
                 Spacer()
+                HStack(spacing: 4) {
+                    ForEach([5, 15, 25], id: \.self) { mins in
+                        Button("\(mins)m") {
+                            timer.setPreset(minutes: mins)
+                        }
+                        .font(.system(size: 9, weight: .semibold, design: .rounded))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.white.opacity(0.09), in: Capsule())
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.white.opacity(0.78))
+                    }
+                    Button {
+                        timer.reset()
+                    } label: {
+                        Image(systemName: "arrow.counterclockwise")
+                            .font(.system(size: 9, weight: .semibold))
+                            .padding(4)
+                            .background(Color.white.opacity(0.08), in: Circle())
+                            .foregroundStyle(.white.opacity(0.7))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            HStack(alignment: .center) {
+                Text(timer.formattedRemaining)
+                    .font(.system(size: 32, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.white)
+                    .minimumScaleFactor(0.8)
+
+                Spacer()
+
                 Button {
                     timer.toggle()
                 } label: {
-                    Image(systemName: timer.isRunning ? "pause.fill" : "play.fill")
-                        .font(.system(size: 10, weight: .bold))
-                        .padding(6)
-                        .background(Color.orange.opacity(0.85), in: Circle())
-                        .foregroundStyle(.black)
+                    ZStack {
+                        Circle()
+                            .fill(Color(red: 0.96, green: 0.42, blue: 0.14))
+                            .frame(width: 38, height: 38)
+                            .shadow(color: Color.orange.opacity(0.45), radius: 8)
+                        Image(systemName: timer.isRunning ? "pause.fill" : "play.fill")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(.black)
+                            .offset(x: timer.isRunning ? 0 : 1)
+                    }
                 }
                 .buttonStyle(.plain)
+            }
+            .padding(.top, 2)
+        }
+        .padding(11)
+        .frame(maxWidth: .infinity, minHeight: 102, alignment: .topLeading)
+        .background(gadgetCardFill, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(gadgetCardBorder, lineWidth: 1))
+    }
+
+    /// System HUD with Circular Battery & CPU Gauge Rings + Capsule Volume Bar
+    private var systemHUDCard: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            HStack {
+                Text("System HUD")
+                    .font(.system(size: 11.5, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.94))
+                Spacer()
+                Text(String(format: "%.1f / %.0f GB", system.snapshot.memoryUsedGB, system.snapshot.memoryTotalGB))
+                    .font(.system(size: 9.5, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.48))
+            }
+
+            HStack(spacing: 14) {
+                HStack(spacing: 8) {
+                    CircularGaugeRing(
+                        progress: Double(system.snapshot.batteryPercent) / 100.0,
+                        tint: system.snapshot.isCharging ? Color(red: 0.25, green: 0.92, blue: 0.56) : .white.opacity(0.88),
+                        iconName: system.snapshot.isCharging ? "bolt.fill" : "battery.75"
+                    )
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Battery")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.white.opacity(0.55))
+                        Text("\(system.snapshot.batteryPercent)%")
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.white)
+                    }
+                }
+
+                HStack(spacing: 8) {
+                    CircularGaugeRing(
+                        progress: system.snapshot.cpuUsagePercent / 100.0,
+                        tint: Color.cyan.opacity(0.9),
+                        iconName: nil
+                    )
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("CPU")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.white.opacity(0.55))
+                        Text(String(format: "%.0f%%", system.snapshot.cpuUsagePercent))
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.white)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+
+            HStack(spacing: 8) {
+                Slider(
+                    value: Binding(
+                        get: { Double(system.snapshot.volumePercent) },
+                        set: { system.setVolume(Int($0)) }
+                    ),
+                    in: 0...100
+                )
+                .controlSize(.mini)
+                .tint(.white)
 
                 Button {
-                    timer.reset()
+                    system.toggleMute()
                 } label: {
-                    Image(systemName: "arrow.counterclockwise")
-                        .font(.system(size: 10, weight: .semibold))
-                        .padding(6)
-                        .background(Color.white.opacity(0.1), in: Circle())
-                        .foregroundStyle(.white.opacity(0.8))
+                    Image(systemName: system.snapshot.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(system.snapshot.isMuted ? .red : .white.opacity(0.8))
                 }
                 .buttonStyle(.plain)
             }
-
-            HStack(spacing: 6) {
-                ForEach([5, 15, 25], id: \.self) { mins in
-                    Button("\(mins)m") {
-                        timer.setPreset(minutes: mins)
-                    }
-                    .font(.system(size: 10, weight: .semibold, design: .rounded))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Color.white.opacity(0.09), in: Capsule())
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.white.opacity(0.8))
-                }
-                Spacer()
-            }
         }
-        .padding(10)
-        .frame(maxWidth: .infinity, minHeight: 82, alignment: .topLeading)
-        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14))
+        .padding(11)
+        .frame(maxWidth: .infinity, minHeight: 102, alignment: .topLeading)
+        .background(gadgetCardFill, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(gadgetCardBorder, lineWidth: 1))
     }
 
     private var aiMiniCard: some View {
         Button {
             coordinator.selectedTab = .ai
+            coordinator.selectedAIFilter = "Jobs"
         } label: {
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     Image(systemName: "cpu.fill")
                         .font(.system(size: 11))
                         .foregroundStyle(.cyan)
-                    Text("AI & Render Hub")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.9))
+                    Text("AI & Render Jobs")
+                        .font(.system(size: 11.5, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.94))
                     Spacer()
                     if let primary = activities.primaryActivity {
                         Text(primary.state.label)
@@ -560,9 +740,16 @@ struct HomeWidgetView: View {
                         .foregroundStyle(.white)
                         .lineLimit(1)
                     if let prog = primary.progress {
-                        ProgressView(value: prog)
-                            .tint(.cyan)
-                            .controlSize(.small)
+                        GeometryReader { proxy in
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(Color.white.opacity(0.14))
+                                Capsule()
+                                    .fill(Color.cyan)
+                                    .frame(width: max(6, proxy.size.width * CGFloat(prog)))
+                                    .shadow(color: .cyan.opacity(0.7), radius: 4)
+                            }
+                        }
+                        .frame(height: 5)
                     } else if !primary.detail.isEmpty {
                         Text(primary.detail)
                             .font(.system(size: 10))
@@ -576,67 +763,19 @@ struct HomeWidgetView: View {
                         .lineLimit(2)
                 }
             }
-            .padding(10)
-            .frame(maxWidth: .infinity, minHeight: 82, alignment: .topLeading)
-            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14))
+            .padding(11)
+            .frame(maxWidth: .infinity, minHeight: 102, alignment: .topLeading)
+            .background(gadgetCardFill, in: RoundedRectangle(cornerRadius: 16))
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(gadgetCardBorder, lineWidth: 1))
         }
         .buttonStyle(.plain)
-    }
-
-    private var systemHUDCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Label("\(system.snapshot.batteryPercent)%", systemImage: system.snapshot.isCharging ? "battery.100.bolt" : "battery.75")
-                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(system.snapshot.isCharging ? .green : .white.opacity(0.85))
-
-                Label(String(format: "CPU %.0f%%", system.snapshot.cpuUsagePercent), systemImage: "gauge.medium")
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.75))
-
-                Spacer()
-
-                Text(String(format: "%.1f/%.0fG", system.snapshot.memoryUsedGB, system.snapshot.memoryTotalGB))
-                    .font(.system(size: 9.5, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.55))
-            }
-
-            HStack(spacing: 8) {
-                Button {
-                    system.toggleMute()
-                } label: {
-                    Image(systemName: system.snapshot.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
-                        .font(.system(size: 11))
-                        .foregroundStyle(system.snapshot.isMuted ? .red : .white.opacity(0.85))
-                }
-                .buttonStyle(.plain)
-
-                Slider(
-                    value: Binding(
-                        get: { Double(system.snapshot.volumePercent) },
-                        set: { system.setVolume(Int($0)) }
-                    ),
-                    in: 0...100
-                )
-                .controlSize(.mini)
-                .tint(.white)
-
-                Text("\(system.snapshot.volumePercent)%")
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.7))
-                    .frame(width: 30, alignment: .trailing)
-            }
-        }
-        .padding(10)
-        .frame(maxWidth: .infinity, minHeight: 82, alignment: .topLeading)
-        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14))
     }
 
     private var scratchpadCard: some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack {
-                Label("Quick Note", systemImage: "note.text")
-                    .font(.system(size: 10.5, weight: .semibold))
+                Label(l10n.quickNote, systemImage: "note.text")
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.yellow.opacity(0.9))
                 Spacer()
                 if !settingsStore.settings.scratchpadText.isEmpty {
@@ -652,20 +791,21 @@ struct HomeWidgetView: View {
                 .font(.system(size: 10.5))
                 .scrollContentBackground(.hidden)
                 .foregroundStyle(.white.opacity(0.9))
-                .frame(height: 46)
+                .frame(height: 58)
                 .padding(4)
                 .background(Color.black.opacity(0.35), in: RoundedRectangle(cornerRadius: 8))
         }
-        .padding(10)
-        .frame(maxWidth: .infinity, minHeight: 82, alignment: .topLeading)
-        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14))
+        .padding(11)
+        .frame(maxWidth: .infinity, minHeight: 102, alignment: .topLeading)
+        .background(gadgetCardFill, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(gadgetCardBorder, lineWidth: 1))
     }
 
     private var clockCard: some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack {
-                Label("Clock", systemImage: "clock.fill")
-                    .font(.system(size: 10.5, weight: .semibold))
+                Label(l10n.clockTitle, systemImage: "clock.fill")
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.indigo)
                 Spacer()
                 Text(formattedDate(coordinator.currentTime))
@@ -673,7 +813,7 @@ struct HomeWidgetView: View {
                     .foregroundStyle(.white.opacity(0.55))
             }
             Text(formattedTime(coordinator.currentTime))
-                .font(.system(size: 22, weight: .bold, design: .monospaced))
+                .font(.system(size: 26, weight: .semibold, design: .monospaced))
                 .foregroundStyle(.white)
             HStack(spacing: 10) {
                 Text("UTC \(formattedTZ(coordinator.currentTime, id: "UTC"))")
@@ -682,9 +822,10 @@ struct HomeWidgetView: View {
             .font(.system(size: 9.5, design: .monospaced))
             .foregroundStyle(.white.opacity(0.55))
         }
-        .padding(10)
-        .frame(maxWidth: .infinity, minHeight: 82, alignment: .topLeading)
-        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14))
+        .padding(11)
+        .frame(maxWidth: .infinity, minHeight: 102, alignment: .topLeading)
+        .background(gadgetCardFill, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(gadgetCardBorder, lineWidth: 1))
     }
 
     private var mirrorCard: some View {

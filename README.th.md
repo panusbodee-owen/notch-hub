@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <img src="./docs/images/hero-banner.jpg" alt="ภาพตัวอย่าง NotchHub บน macOS พร้อมถาดรูป Cap 5 รูปและ Gadget" width="100%" />
+  <img src="./docs/images/hero-banner.png" alt="ภาพจริงจากแอป NotchHub บน macOS พร้อมถาดรูป Cap 5 รูปและ Gadget" width="100%" />
 </p>
 
 ---
@@ -46,12 +46,12 @@ curl -fL "https://github.com/panusbodee-owen/notch-hub/releases/latest/download/
 
 ### Dynamic Notch 3 สถานะ + ลากพักไฟล์และรูป Cap
 <p align="center">
-  <img src="./docs/images/notch-states.jpg" alt="สถานะทั้ง 3 แบบของ NotchHub: Closed, Compact Wings, Expanded Hub" width="100%" />
+  <img src="./docs/images/notch-states.png" alt="สถานะทั้ง 3 แบบของ NotchHub: Closed, Compact Wings, Expanded Hub" width="100%" />
 </p>
 
 ### AI Radar & Live Jobs (สแกน Desktop App • CLI • API ทั้งเครื่อง)
 <p align="center">
-  <img src="./docs/images/ai-radar.jpg" alt="หน้าจอ AI Radar แสดง Desktop Apps, CLI และ API บนเครื่อง Mac" width="100%" />
+  <img src="./docs/images/ai-radar.png" alt="หน้าจอ AI Radar แสดง Desktop Apps, CLI และ API บนเครื่อง Mac" width="100%" />
 </p>
 
 ---

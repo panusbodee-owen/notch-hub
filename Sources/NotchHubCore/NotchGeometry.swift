@@ -32,9 +32,9 @@ public struct NotchGeometry: Sendable {
 
     public init(
         metrics: ScreenMetrics,
-        preferredExpandedWidth: CGFloat = 680,
-        preferredExpandedHeight: CGFloat = 360,
-        preferredCompactWingExtra: CGFloat = 160
+        preferredExpandedWidth: CGFloat = 700,
+        preferredExpandedHeight: CGFloat = 440,
+        preferredCompactWingExtra: CGFloat = 180
     ) {
         self.metrics = metrics
         self.preferredExpandedWidth = preferredExpandedWidth

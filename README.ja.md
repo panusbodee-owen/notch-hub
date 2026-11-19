@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <img src="./docs/images/hero-banner.jpg" alt="NotchHub ヒーローバナー — macOS ノッチに広がるガジェットとスクショトレイ" width="100%" />
+  <img src="./docs/images/hero-banner.png" alt="NotchHub 実機UIスクリーンショット — macOS ノッチガジェット＆スクショトレイ" width="100%" />
 </p>
 
 ---
@@ -46,12 +46,12 @@ curl -fL "https://github.com/panusbodee-owen/notch-hub/releases/latest/download/
 
 ### 3段階ダイナミックノッチ & ドラッグ＆ドロップ連携
 <p align="center">
-  <img src="./docs/images/notch-states.jpg" alt="NotchHub の3状態: Closed, Compact Wings, Expanded Hub" width="100%" />
+  <img src="./docs/images/notch-states.png" alt="NotchHub の3状態: Closed, Compact Wings, Expanded Hub" width="100%" />
 </p>
 
 ### AI レーダー & ライブジョブ (デスクトップアプリ • CLI • API)
 <p align="center">
-  <img src="./docs/images/ai-radar.jpg" alt="NotchHub AI レーダー画面 — Desktop, CLI, API 一覧" width="100%" />
+  <img src="./docs/images/ai-radar.png" alt="NotchHub AI レーダー画面 — Desktop, CLI, API 一覧" width="100%" />
 </p>
 
 ---

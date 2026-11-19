@@ -11,10 +11,10 @@ struct SettingsWidgetView: View {
     }
 
     private let presets: [(label: String, w: Double, h: Double)] = [
-        ("S", 560, 280),
-        ("M", 680, 360),
-        ("L", 820, 420),
-        ("XL", 960, 480)
+        ("S", 580, 320),
+        ("M", 700, 440),
+        ("L", 840, 480),
+        ("XL", 980, 520)
     ]
 
     var body: some View {

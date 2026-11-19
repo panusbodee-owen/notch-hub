@@ -1,6 +1,9 @@
 import NotchHubCore
 import SwiftUI
 
+private let aiCardFill = Color(red: 0.085, green: 0.088, blue: 0.102)
+private let aiCardBorder = Color.white.opacity(0.10)
+
 struct AICreatorWidgetView: View {
     @ObservedObject var coordinator: NotchCoordinator
     @ObservedObject var activities: LiveActivityStore
@@ -38,32 +41,32 @@ struct AICreatorWidgetView: View {
     }
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 10) {
             // Top Filter Strip + Rescan + Demo Job
             HStack(spacing: 6) {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 5) {
+                    HStack(spacing: 6) {
                         ForEach(filters, id: \.id) { f in
                             let selected = coordinator.selectedAIFilter == f.id
                             Button {
                                 coordinator.selectedAIFilter = f.id
                             } label: {
-                                HStack(spacing: 4) {
+                                HStack(spacing: 5) {
                                     Text(f.label)
-                                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                        .font(.system(size: 10.5, weight: .semibold, design: .rounded))
                                     Text("\(f.count)")
                                         .font(.system(size: 9, weight: .bold, design: .monospaced))
-                                        .padding(.horizontal, 4)
+                                        .padding(.horizontal, 5)
                                         .padding(.vertical, 1)
-                                        .background(Color.black.opacity(selected ? 0.25 : 0.35), in: Capsule())
+                                        .background(Color.white.opacity(selected ? 0.22 : 0.12), in: Capsule())
                                 }
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
                                 .background(
-                                    selected ? Color.cyan.opacity(0.85) : Color.white.opacity(0.08),
+                                    selected ? Color.white.opacity(0.18) : Color.clear,
                                     in: Capsule()
                                 )
-                                .foregroundStyle(selected ? .black : .white.opacity(0.85))
+                                .foregroundStyle(selected ? .white : .white.opacity(0.65))
                             }
                             .buttonStyle(.plain)
                         }
@@ -78,7 +81,7 @@ struct AICreatorWidgetView: View {
                     Image(systemName: "arrow.clockwise")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(aiDiscovery.isScanning ? .cyan : .white.opacity(0.75))
-                        .padding(5)
+                        .padding(6)
                         .background(Color.white.opacity(0.08), in: Circle())
                 }
                 .buttonStyle(.plain)
@@ -86,62 +89,57 @@ struct AICreatorWidgetView: View {
 
                 Button("Demo Job") {
                     coordinator.injectDemoActivity()
-                    coordinator.selectedAIFilter = "Jobs"
+                    coordinator.selectedAIFilter = "All"
                 }
                 .font(.system(size: 9.5, weight: .semibold))
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
                 .background(Color.white.opacity(0.09), in: Capsule())
                 .foregroundStyle(.white.opacity(0.8))
                 .buttonStyle(.plain)
             }
 
-            // Main Content: Live Jobs OR Discovered AIs (Desktop / CLI / API)
+            // Main Content: Live Jobs OR Discovered AIs + Live Progress Card
             if coordinator.selectedAIFilter == "Jobs" {
                 jobsSection
             } else {
                 discoveredAISection
             }
 
+            Divider().overlay(Color.white.opacity(0.08))
+
             // Creative App Quick Launch Bar
             HStack(spacing: 8) {
-                Text("Creative Apps:")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.5))
-
+                Spacer(minLength: 0)
                 ForEach(creativeApps, id: \.name) { app in
                     let installed = FileManager.default.fileExists(atPath: app.path)
                     Button {
                         coordinator.launchApp(named: app.path)
                     } label: {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 5) {
                             Image(systemName: app.icon)
-                                .font(.system(size: 10))
-                                .foregroundStyle(installed ? app.accent : .gray)
+                                .font(.system(size: 10.5))
+                                .foregroundStyle(installed ? app.accent : .white.opacity(0.45))
                             Text(app.name)
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(installed ? .white : .white.opacity(0.35))
+                                .font(.system(size: 10.5, weight: .semibold, design: .rounded))
+                                .foregroundStyle(installed ? .white : .white.opacity(0.45))
                         }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.white.opacity(installed ? 0.09 : 0.03), in: Capsule())
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 5)
+                        .background(aiCardFill, in: Capsule())
+                        .overlay(Capsule().stroke(Color.white.opacity(installed ? 0.14 : 0.06), lineWidth: 1))
                     }
                     .buttonStyle(.plain)
                     .disabled(!installed)
                 }
-
-                Spacer()
-
-                Text("API :\(coordinator.settingsStore.settings.apiPort)")
-                    .font(.system(size: 9.5, design: .monospaced))
-                    .foregroundStyle(.cyan.opacity(0.7))
+                Spacer(minLength: 0)
             }
         }
     }
 
     private var discoveredAISection: some View {
         Group {
-            if filteredItems.isEmpty {
+            if filteredItems.isEmpty && activities.activities.isEmpty {
                 VStack(spacing: 5) {
                     Text(aiDiscovery.isScanning ? "Scanning this Mac for AI tools..." : "No AI tools found in this category")
                         .font(.system(size: 11, weight: .medium))
@@ -151,18 +149,21 @@ struct AICreatorWidgetView: View {
                         .foregroundStyle(.white.opacity(0.45))
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+                .background(aiCardFill, in: RoundedRectangle(cornerRadius: 12))
             } else {
                 ScrollView(.vertical, showsIndicators: false) {
                     LazyVGrid(
                         columns: [
-                            GridItem(.flexible(), spacing: 8),
-                            GridItem(.flexible(), spacing: 8)
+                            GridItem(.flexible(), spacing: 9),
+                            GridItem(.flexible(), spacing: 9)
                         ],
-                        spacing: 7
+                        spacing: 9
                     ) {
                         ForEach(filteredItems) { item in
                             discoveredRow(item)
+                        }
+                        if coordinator.selectedAIFilter == "All", let liveJob = activities.primaryActivity {
+                            liveProgressTile(liveJob)
                         }
                     }
                     .padding(.vertical, 2)
@@ -172,57 +173,76 @@ struct AICreatorWidgetView: View {
     }
 
     private func discoveredRow(_ item: DiscoveredAIItem) -> some View {
-        HStack(spacing: 8) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(categoryColor(item.category).opacity(0.18))
-                    .frame(width: 28, height: 28)
-                Image(systemName: item.category.symbolName)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(categoryColor(item.category))
+        let dotColor = statusColor(item.status)
+        let isGlowing = item.status == .running || item.status == .online || item.status == .configured
+        return Button {
+            aiDiscovery.activate(item) { text in
+                coordinator.clipboardMonitor.copyToPasteboard(text)
             }
+        } label: {
+            HStack(spacing: 9) {
+                VStack(alignment: .leading, spacing: 2.5) {
+                    HStack(spacing: 5) {
+                        Text(item.name)
+                            .font(.system(size: 11.5, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                        Text("(\(item.status.rawValue))")
+                            .font(.system(size: 10.5, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.55))
+                            .lineLimit(1)
+                    }
 
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 5) {
-                    Text(item.name)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.white)
+                    Text(item.subtitle)
+                        .font(.system(size: 9.5))
+                        .foregroundStyle(.white.opacity(0.45))
                         .lineLimit(1)
-
-                    Circle()
-                        .fill(statusColor(item.status))
-                        .frame(width: 6, height: 6)
-
-                    Text(item.status.rawValue)
-                        .font(.system(size: 8.5, weight: .bold))
-                        .foregroundStyle(statusColor(item.status))
                 }
 
-                Text(item.subtitle)
-                    .font(.system(size: 9.5))
-                    .foregroundStyle(.white.opacity(0.55))
-                    .lineLimit(1)
-            }
+                Spacer(minLength: 4)
 
-            Spacer(minLength: 2)
-
-            Button {
-                aiDiscovery.activate(item) { text in
-                    coordinator.clipboardMonitor.copyToPasteboard(text)
-                }
-            } label: {
-                Text(actionLabel(for: item))
-                    .font(.system(size: 9, weight: .bold, design: .rounded))
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 4)
-                    .background(Color.white.opacity(0.12), in: Capsule())
-                    .foregroundStyle(.white.opacity(0.9))
+                Circle()
+                    .fill(dotColor)
+                    .frame(width: 8, height: 8)
+                    .shadow(color: isGlowing ? dotColor.opacity(0.95) : .clear, radius: 5)
             }
-            .buttonStyle(.plain)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(aiCardFill, in: RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(aiCardBorder, lineWidth: 1))
         }
-        .padding(.horizontal, 9)
-        .padding(.vertical, 7)
-        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 11))
+        .buttonStyle(.plain)
+        .help("\(actionLabel(for: item)) \(item.name) — \(item.targetPathOrURL)")
+    }
+
+    private func liveProgressTile(_ act: LiveActivity) -> some View {
+        let pct = Int((act.progress ?? 0.5) * 100)
+        return VStack(alignment: .leading, spacing: 7) {
+            HStack {
+                Text(act.title)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                Spacer()
+                Text("\(pct)%")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundStyle(.cyan)
+            }
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.white.opacity(0.14))
+                    Capsule()
+                        .fill(Color.cyan)
+                        .frame(width: max(8, proxy.size.width * CGFloat(act.progress ?? 0.5)))
+                        .shadow(color: .cyan.opacity(0.85), radius: 5)
+                }
+            }
+            .frame(height: 5.5)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(aiCardFill, in: RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.cyan.opacity(0.42), lineWidth: 1))
     }
 
     private var jobsSection: some View {
@@ -237,10 +257,10 @@ struct AICreatorWidgetView: View {
                         .foregroundStyle(.cyan.opacity(0.65))
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+                .background(aiCardFill, in: RoundedRectangle(cornerRadius: 12))
             } else {
                 ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 6) {
+                    VStack(spacing: 7) {
                         ForEach(activities.activities) { act in
                             activityRow(act)
                         }
@@ -251,11 +271,12 @@ struct AICreatorWidgetView: View {
     }
 
     private func activityRow(_ act: LiveActivity) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 6) {
                 Circle()
                     .fill(colorForActivity(act.state))
                     .frame(width: 7, height: 7)
+                    .shadow(color: colorForActivity(act.state).opacity(0.85), radius: 4)
                 Text(act.source)
                     .font(.system(size: 10, weight: .bold, design: .rounded))
                     .foregroundStyle(colorForActivity(act.state))
@@ -266,11 +287,11 @@ struct AICreatorWidgetView: View {
                 Spacer()
                 if let p = act.progress {
                     Text("\(Int(p * 100))%")
-                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .font(.system(size: 10.5, weight: .bold, design: .monospaced))
                         .foregroundStyle(.cyan)
                 } else {
                     Text(act.state.label)
-                        .font(.system(size: 9, weight: .bold))
+                        .font(.system(size: 9.5, weight: .bold))
                         .foregroundStyle(colorForActivity(act.state))
                 }
                 Button {
@@ -286,34 +307,35 @@ struct AICreatorWidgetView: View {
             if !act.detail.isEmpty {
                 Text(act.detail)
                     .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.62))
+                    .foregroundStyle(.white.opacity(0.6))
                     .lineLimit(1)
             }
 
             if let p = act.progress {
-                ProgressView(value: p)
-                    .tint(colorForActivity(act.state))
-                    .controlSize(.mini)
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Color.white.opacity(0.14))
+                        Capsule()
+                            .fill(colorForActivity(act.state))
+                            .frame(width: max(8, proxy.size.width * CGFloat(p)))
+                            .shadow(color: colorForActivity(act.state).opacity(0.75), radius: 4)
+                    }
+                }
+                .frame(height: 5)
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
-    }
-
-    private func categoryColor(_ cat: AICategory) -> Color {
-        switch cat {
-        case .desktopApp: return .purple
-        case .cli: return .green
-        case .api: return .cyan
-        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background(aiCardFill, in: RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(aiCardBorder, lineWidth: 1))
     }
 
     private func statusColor(_ status: AIRunStatus) -> Color {
         switch status {
-        case .running, .online: return .green
-        case .configured: return .cyan
-        case .installed: return .white.opacity(0.45)
+        case .running: return Color(red: 0.20, green: 0.92, blue: 0.48)
+        case .online: return Color(red: 0.16, green: 0.88, blue: 0.72)
+        case .configured: return Color(red: 0.16, green: 0.85, blue: 0.98)
+        case .installed: return Color.white.opacity(0.48)
         }
     }
 

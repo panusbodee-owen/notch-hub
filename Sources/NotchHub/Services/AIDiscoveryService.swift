@@ -30,6 +30,12 @@ final class AIDiscoveryService: ObservableObject {
     var cliTools: [DiscoveredAIItem] { items.filter { $0.category == .cli } }
     var apis: [DiscoveredAIItem] { items.filter { $0.category == .api } }
 
+    func setItemsForShowcase(_ mockItems: [DiscoveredAIItem]) {
+        self.items = mockItems
+        self.lastScannedAt = Date()
+        self.isScanning = false
+    }
+
     func refresh() {
         guard !isScanning else { return }
         isScanning = true

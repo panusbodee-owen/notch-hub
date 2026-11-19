@@ -321,9 +321,9 @@ public struct NotchSettings: Codable, Equatable, Sendable {
     public var hoverDelaySeconds: Double = 0.18
     public var apiPort: UInt16 = 47890
     public var showCompactWings: Bool = true
-    public var expandedWidth: Double = 680
-    public var expandedHeight: Double = 360
-    public var compactWingExtraWidth: Double = 160
+    public var expandedWidth: Double = 700
+    public var expandedHeight: Double = 440
+    public var compactWingExtraWidth: Double = 180
     public var homeGadgets: [HomeGadgetKind] = [.captures, .aiRadar, .media, .timer, .system]
     public var maxScreenshots: Int = 5
     public var scratchpadText: String = ""
@@ -343,9 +343,9 @@ public struct NotchSettings: Codable, Equatable, Sendable {
         self.hoverDelaySeconds = try c.decodeIfPresent(Double.self, forKey: .hoverDelaySeconds) ?? 0.18
         self.apiPort = try c.decodeIfPresent(UInt16.self, forKey: .apiPort) ?? 47890
         self.showCompactWings = try c.decodeIfPresent(Bool.self, forKey: .showCompactWings) ?? true
-        self.expandedWidth = try c.decodeIfPresent(Double.self, forKey: .expandedWidth) ?? 680
-        self.expandedHeight = try c.decodeIfPresent(Double.self, forKey: .expandedHeight) ?? 360
-        self.compactWingExtraWidth = try c.decodeIfPresent(Double.self, forKey: .compactWingExtraWidth) ?? 160
+        self.expandedWidth = try c.decodeIfPresent(Double.self, forKey: .expandedWidth) ?? 700
+        self.expandedHeight = try c.decodeIfPresent(Double.self, forKey: .expandedHeight) ?? 440
+        self.compactWingExtraWidth = try c.decodeIfPresent(Double.self, forKey: .compactWingExtraWidth) ?? 180
         self.homeGadgets = try c.decodeIfPresent([HomeGadgetKind].self, forKey: .homeGadgets)
             ?? [.captures, .aiRadar, .media, .timer, .system]
         self.maxScreenshots = try c.decodeIfPresent(Int.self, forKey: .maxScreenshots) ?? 5
