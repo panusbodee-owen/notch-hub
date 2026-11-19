@@ -3,10 +3,19 @@ import NotchHubCore
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Authentic macOS Dynamic Notch silhouette:
-/// - When `hasConcaveEars` is true, draws outward concave top-left & top-right ears that melt
-///   seamlessly into the MacBook top bezel, paired with smooth rounded bottom corners.
-/// - On external non-notch displays, draws a crisp rounded floating pill.
+/// Subtle tactile spring feedback on buttons inside NotchHub.
+struct NotchSpringButtonStyle: ButtonStyle {
+    var pressedScale: CGFloat = 0.94
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? pressedScale : 1.0)
+            .opacity(configuration.isPressed ? 0.88 : 1.0)
+            .animation(.spring(response: 0.20, dampingFraction: 0.72), value: configuration.isPressed)
+    }
+}
+
+/// Authentic macOS Dynamic Notch silhouette with animatable concave top ears and rounded bottom corners.
 struct NotchShellShape: Shape {
     var bottomRadius: CGFloat
     var topRadius: CGFloat
@@ -27,32 +36,23 @@ struct NotchShellShape: Shape {
         let br = min(bottomRadius, (rect.width - ear * 2) / 2, rect.height / 2)
 
         if ear > 0.5 {
-            // Start at top-left outer tip of the concave ear
             path.move(to: CGPoint(x: rect.minX, y: rect.minY))
-            // Top edge across to top-right outer tip
             path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
-            // Concave inward curve on top-right
             path.addQuadCurve(
                 to: CGPoint(x: rect.maxX - ear, y: rect.minY + ear),
                 control: CGPoint(x: rect.maxX - ear, y: rect.minY)
             )
-            // Right vertical side
             path.addLine(to: CGPoint(x: rect.maxX - ear, y: rect.maxY - br))
-            // Bottom-right rounded corner
             path.addQuadCurve(
                 to: CGPoint(x: rect.maxX - ear - br, y: rect.maxY),
                 control: CGPoint(x: rect.maxX - ear, y: rect.maxY)
             )
-            // Bottom edge
             path.addLine(to: CGPoint(x: rect.minX + ear + br, y: rect.maxY))
-            // Bottom-left rounded corner
             path.addQuadCurve(
                 to: CGPoint(x: rect.minX + ear, y: rect.maxY - br),
                 control: CGPoint(x: rect.minX + ear, y: rect.maxY)
             )
-            // Left vertical side
             path.addLine(to: CGPoint(x: rect.minX + ear, y: rect.minY + ear))
-            // Concave outward curve back to top-left outer tip
             path.addQuadCurve(
                 to: CGPoint(x: rect.minX, y: rect.minY),
                 control: CGPoint(x: rect.minX + ear, y: rect.minY)
@@ -61,7 +61,6 @@ struct NotchShellShape: Shape {
             return path
         }
 
-        // Standard rounded pill for external non-notched displays
         let tr = min(topRadius, rect.height / 2, rect.width / 2)
         path.move(to: CGPoint(x: rect.minX + tr, y: rect.minY))
         path.addLine(to: CGPoint(x: rect.maxX - tr, y: rect.minY))
@@ -95,7 +94,20 @@ struct NotchShellShape: Shape {
 
 struct NotchRootView: View {
     @ObservedObject var coordinator: NotchCoordinator
+    @ObservedObject var settingsStore: SettingsStore
     var forceConcaveEars: Bool? = nil
+    var isShowcaseMode: Bool = false
+
+    init(
+        coordinator: NotchCoordinator,
+        forceConcaveEars: Bool? = nil,
+        isShowcaseMode: Bool = false
+    ) {
+        self.coordinator = coordinator
+        self.settingsStore = coordinator.settingsStore
+        self.forceConcaveEars = forceConcaveEars
+        self.isShowcaseMode = isShowcaseMode
+    }
 
     private var hasHardwareNotch: Bool {
         forceConcaveEars ?? coordinator.currentGeometry.metrics.hasHardwareNotch
@@ -122,12 +134,47 @@ struct NotchRootView: View {
         hasHardwareNotch ? 0 : (coordinator.displayState == .expanded ? 20 : 14)
     }
 
+    private var shellShape: NotchShellShape {
+        NotchShellShape(bottomRadius: bottomRadius, topRadius: topRadius, earRadius: earRadius)
+    }
+
+    private var pillSize: CGSize {
+        coordinator.currentGeometry.panelSize(for: coordinator.displayState)
+    }
+
+    private var effectiveContentVisible: Bool {
+        isShowcaseMode ? (coordinator.displayState == .expanded) : coordinator.isContentVisible
+    }
+
     var body: some View {
+        if isShowcaseMode {
+            notchPillBody
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .preferredColorScheme(.dark)
+        } else {
+            ZStack(alignment: .top) {
+                Color.clear
+                notchPillBody
+                    .frame(width: pillSize.width, height: pillSize.height)
+                    .padding(.top, hasHardwareNotch ? 0 : 4)
+                    .animation(
+                        coordinator.isResizing
+                            ? nil
+                            : .spring(response: 0.36, dampingFraction: 0.80, blendDuration: 0.10),
+                        value: pillSize
+                    )
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .preferredColorScheme(.dark)
+        }
+    }
+
+    private var notchPillBody: some View {
         ZStack(alignment: .top) {
-            NotchShellShape(bottomRadius: bottomRadius, topRadius: topRadius, earRadius: earRadius)
+            shellShape
                 .fill(Color(red: 0.02, green: 0.02, blue: 0.03))
                 .overlay(
-                    NotchShellShape(bottomRadius: bottomRadius, topRadius: topRadius, earRadius: earRadius)
+                    shellShape
                         .stroke(
                             coordinator.isDropTargeted
                                 ? Color.cyan.opacity(0.95)
@@ -136,32 +183,35 @@ struct NotchRootView: View {
                         )
                 )
                 .shadow(
-                    color: Color.black.opacity(coordinator.displayState == .expanded ? 0.65 : 0.30),
-                    radius: coordinator.displayState == .expanded ? 22 : 8,
+                    color: Color.black.opacity(coordinator.displayState == .expanded ? 0.62 : 0.28),
+                    radius: coordinator.displayState == .expanded ? 20 : 6,
                     x: 0,
-                    y: 6
+                    y: coordinator.displayState == .expanded ? 8 : 3
                 )
 
             Group {
                 switch coordinator.displayState {
                 case .closed:
                     closedView
+                        .transition(.opacity)
                 case .compact:
                     compactWingsView
+                        .transition(.opacity.combined(with: .scale(scale: 0.96)))
                 case .expanded:
                     ZStack(alignment: .bottomTrailing) {
                         expandedView
+                            .opacity(effectiveContentVisible ? 1 : 0)
+                            .scaleEffect(effectiveContentVisible ? 1.0 : 0.95, anchor: .top)
+                            .blur(radius: effectiveContentVisible ? 0 : 2.5)
                         resizeGrip
+                            .opacity(effectiveContentVisible ? 1 : 0)
                     }
                 }
             }
             .padding(.horizontal, earRadius > 0 ? earRadius : 0)
+            .clipShape(shellShape)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .contentShape(Rectangle())
-        .onHover { hovering in
-            coordinator.handleHoverChanged(hovering)
-        }
+        .contentShape(shellShape)
         .onTapGesture {
             if coordinator.displayState != .expanded {
                 coordinator.toggleExpanded()
@@ -170,7 +220,6 @@ struct NotchRootView: View {
         .onDrop(of: [UTType.fileURL], isTargeted: $coordinator.isDropTargeted) { providers in
             handleFileDrop(providers)
         }
-        .preferredColorScheme(.dark)
     }
 
     private var closedView: some View {
@@ -189,9 +238,8 @@ struct NotchRootView: View {
 
     private var compactWingsView: some View {
         HStack {
-            // Left Wing: AI Activity or Music indicator
             HStack(spacing: 6) {
-                if let primary = coordinator.activityStore.primaryActivity, coordinator.settingsStore.settings.enableAIHub {
+                if let primary = coordinator.activityStore.primaryActivity, settingsStore.settings.enableAIHub {
                     Circle()
                         .fill(colorForActivity(primary.state))
                         .frame(width: 7, height: 7)
@@ -200,7 +248,7 @@ struct NotchRootView: View {
                         .font(.system(size: 10.5, weight: .semibold, design: .rounded))
                         .foregroundStyle(.white.opacity(0.92))
                         .lineLimit(1)
-                } else if coordinator.mediaService.track.isPlaying, coordinator.settingsStore.settings.enableMedia {
+                } else if coordinator.mediaService.track.isPlaying, settingsStore.settings.enableMedia {
                     Image(systemName: "waveform")
                         .font(.system(size: 10.5, weight: .bold))
                         .foregroundStyle(.green)
@@ -210,16 +258,15 @@ struct NotchRootView: View {
                         .lineLimit(1)
                 }
             }
-            .frame(maxWidth: max(108, CGFloat(coordinator.settingsStore.settings.compactWingExtraWidth) * 0.58), alignment: .leading)
+            .frame(maxWidth: max(108, CGFloat(settingsStore.settings.compactWingExtraWidth) * 0.58), alignment: .leading)
             .padding(.leading, 12)
 
             Spacer()
 
-            // Right Wing: Progress Ring %, Timer, or Music icon
             HStack(spacing: 6) {
                 if let primary = coordinator.activityStore.primaryActivity,
                    let progress = primary.progress,
-                   coordinator.settingsStore.settings.enableAIHub {
+                   settingsStore.settings.enableAIHub {
                     ZStack {
                         Circle()
                             .stroke(Color.white.opacity(0.16), lineWidth: 2)
@@ -232,7 +279,7 @@ struct NotchRootView: View {
                     Text("\(Int(progress * 100))%")
                         .font(.system(size: 10.5, weight: .bold, design: .monospaced))
                         .foregroundStyle(.cyan)
-                } else if coordinator.timerStore.isRunning, coordinator.settingsStore.settings.enableTimer {
+                } else if coordinator.timerStore.isRunning, settingsStore.settings.enableTimer {
                     Image(systemName: "timer")
                         .font(.system(size: 10))
                         .foregroundStyle(.orange)
@@ -245,7 +292,7 @@ struct NotchRootView: View {
                         .foregroundStyle(.green)
                 }
             }
-            .frame(maxWidth: max(96, CGFloat(coordinator.settingsStore.settings.compactWingExtraWidth) * 0.52), alignment: .trailing)
+            .frame(maxWidth: max(96, CGFloat(settingsStore.settings.compactWingExtraWidth) * 0.52), alignment: .trailing)
             .padding(.trailing, 12)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -253,11 +300,12 @@ struct NotchRootView: View {
 
     private var expandedView: some View {
         VStack(spacing: 10) {
-            // Top Header & Tab Strip
+            // Top Header & Smooth Animated Tab Strip
             HStack(spacing: 6) {
                 ForEach(visibleTabs) { tab in
+                    let isSelected = coordinator.selectedTab == tab
                     Button {
-                        withAnimation(.easeInOut(duration: 0.16)) {
+                        withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
                             coordinator.selectedTab = tab
                         }
                     } label: {
@@ -283,21 +331,18 @@ struct NotchRootView: View {
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
                         .background(
-                            coordinator.selectedTab == tab
-                                ? Color.white.opacity(0.15)
-                                : Color.clear,
+                            isSelected ? Color.white.opacity(0.16) : Color.clear,
                             in: Capsule()
                         )
-                        .foregroundStyle(coordinator.selectedTab == tab ? .white : .white.opacity(0.6))
+                        .foregroundStyle(isSelected ? .white : .white.opacity(0.6))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(NotchSpringButtonStyle(pressedScale: 0.95))
                 }
 
                 Spacer()
 
-                // Quick Camera Mirror button
                 Button {
-                    withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
+                    withAnimation(.spring(response: 0.26, dampingFraction: 0.82)) {
                         coordinator.showMirror.toggle()
                         if coordinator.showMirror {
                             coordinator.selectedTab = .home
@@ -310,12 +355,13 @@ struct NotchRootView: View {
                         .padding(5)
                         .background(Color.white.opacity(coordinator.showMirror ? 0.18 : 0.07), in: Circle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(NotchSpringButtonStyle())
                 .help("Quick Camera Mirror")
 
-                // Pin open toggle
                 Button {
-                    coordinator.isPinnedOpen.toggle()
+                    withAnimation(.spring(response: 0.22, dampingFraction: 0.8)) {
+                        coordinator.isPinnedOpen.toggle()
+                    }
                 } label: {
                     Image(systemName: coordinator.isPinnedOpen ? "pin.fill" : "pin")
                         .font(.system(size: 11))
@@ -323,10 +369,9 @@ struct NotchRootView: View {
                         .padding(5)
                         .background(Color.white.opacity(coordinator.isPinnedOpen ? 0.18 : 0.07), in: Circle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(NotchSpringButtonStyle())
                 .help("Keep Notch Expanded")
 
-                // Close button
                 Button {
                     coordinator.toggleExpanded()
                 } label: {
@@ -336,30 +381,36 @@ struct NotchRootView: View {
                         .padding(5)
                         .background(Color.white.opacity(0.08), in: Circle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(NotchSpringButtonStyle())
             }
-            .padding(.top, hasHardwareNotch ? 12 : 12)
+            .padding(.top, 12)
             .padding(.horizontal, 14)
 
             Divider()
                 .overlay(Color.white.opacity(0.08))
                 .padding(.horizontal, 14)
 
-            // Active Tab Content
-            Group {
+            // Active Tab Content with crisp crossfade
+            ZStack {
                 switch coordinator.selectedTab {
                 case .home:
                     HomeWidgetView(coordinator: coordinator)
+                        .transition(.opacity.combined(with: .scale(scale: 0.985)))
                 case .shelf:
                     ShelfWidgetView(coordinator: coordinator)
+                        .transition(.opacity.combined(with: .scale(scale: 0.985)))
                 case .ai:
                     AICreatorWidgetView(coordinator: coordinator)
+                        .transition(.opacity.combined(with: .scale(scale: 0.985)))
                 case .clipboard:
                     ClipboardWidgetView(coordinator: coordinator)
+                        .transition(.opacity.combined(with: .scale(scale: 0.985)))
                 case .settings:
                     SettingsWidgetView(coordinator: coordinator)
+                        .transition(.opacity.combined(with: .scale(scale: 0.985)))
                 }
             }
+            .animation(.easeOut(duration: 0.18), value: coordinator.selectedTab)
             .padding(.horizontal, 14)
             .padding(.bottom, 14)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -385,7 +436,7 @@ struct NotchRootView: View {
     }
 
     private var visibleTabs: [NotchTab] {
-        let s = coordinator.settingsStore.settings
+        let s = settingsStore.settings
         var tabs: [NotchTab] = [.home]
         if s.enableShelf { tabs.append(.shelf) }
         if s.enableAIHub { tabs.append(.ai) }
@@ -395,7 +446,7 @@ struct NotchRootView: View {
     }
 
     private func handleFileDrop(_ providers: [NSItemProvider]) -> Bool {
-        guard coordinator.settingsStore.settings.enableShelf else { return false }
+        guard settingsStore.settings.enableShelf else { return false }
         var handled = false
         for provider in providers {
             if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {

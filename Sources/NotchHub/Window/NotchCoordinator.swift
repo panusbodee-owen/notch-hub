@@ -7,6 +7,7 @@ import SwiftUI
 @MainActor
 final class NotchCoordinator: ObservableObject {
     @Published var displayState: NotchDisplayState = .closed
+    @Published var isContentVisible: Bool = false
     @Published var selectedTab: NotchTab = .home
     @Published var isDropTargeted: Bool = false
     @Published var showMirror: Bool = false
@@ -41,8 +42,11 @@ final class NotchCoordinator: ObservableObject {
     private var statusItem: NSStatusItem?
     private var hoverTask: Task<Void, Never>?
     private var collapseTask: Task<Void, Never>?
+    private var transitionStageTask: Task<Void, Never>?
     private var focusTickTimer: Timer?
-    private var dragMonitor: Any?
+    private var globalPointerMonitor: Any?
+    private var localPointerMonitor: Any?
+    private var isPointerInsideNotch: Bool = false
     private var cancellables = Set<AnyCancellable>()
 
     init(inMemoryOnly: Bool = false) {
@@ -85,7 +89,7 @@ final class NotchCoordinator: ObservableObject {
         setupWindow()
         setupStatusBarItem()
         setupScreenObserver()
-        setupDragMonitor()
+        setupPointerMonitors()
 
         mediaService.start()
         systemService.start()
@@ -127,7 +131,7 @@ final class NotchCoordinator: ObservableObject {
             .sink { [weak self] _ in
                 guard let self else { return }
                 self.syncRestingStateIfNotExpanded()
-                self.applyCurrentFrame(animated: !self.isResizing)
+                self.updatePanelHitTesting(mouseLocation: NSEvent.mouseLocation)
             }
             .store(in: &cancellables)
 
@@ -142,8 +146,14 @@ final class NotchCoordinator: ObservableObject {
         aiDiscovery.stop()
         activityServer?.stop()
         focusTickTimer?.invalidate()
-        if let dragMonitor {
-            NSEvent.removeMonitor(dragMonitor)
+        hoverTask?.cancel()
+        collapseTask?.cancel()
+        transitionStageTask?.cancel()
+        if let globalPointerMonitor {
+            NSEvent.removeMonitor(globalPointerMonitor)
+        }
+        if let localPointerMonitor {
+            NSEvent.removeMonitor(localPointerMonitor)
         }
     }
 
@@ -219,20 +229,6 @@ final class NotchCoordinator: ObservableObject {
         )
     }
 
-    func applyCurrentFrame(animated: Bool = true) {
-        guard let panel else { return }
-        let targetFrame = currentGeometry.panelFrame(for: displayState)
-        if animated {
-            NSAnimationContext.runAnimationGroup { ctx in
-                ctx.duration = 0.22
-                ctx.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-                panel.animator().setFrame(targetFrame, display: true)
-            }
-        } else {
-            panel.setFrame(targetFrame, display: true)
-        }
-    }
-
     private var resizeStartSize: CGSize?
 
     func beginResizeIfNeeded() {
@@ -248,23 +244,24 @@ final class NotchCoordinator: ObservableObject {
     func updateResize(translation: CGSize) {
         beginResizeIfNeeded()
         guard let start = resizeStartSize else { return }
-        // Symmetrical width resize (dragging right edge by dx expands total width by 2*dx)
         let nextW = min(1100.0, max(460.0, Double(start.width) + Double(translation.width) * 2.0))
-        let nextH = min(540.0, max(220.0, Double(start.height) + Double(translation.height)))
+        let nextH = min(560.0, max(220.0, Double(start.height) + Double(translation.height)))
         settingsStore.settings.expandedWidth = round(nextW)
         settingsStore.settings.expandedHeight = round(nextH)
-        applyCurrentFrame(animated: false)
     }
 
     func endResize() {
         resizeStartSize = nil
         isResizing = false
+        updatePanelHitTesting(mouseLocation: NSEvent.mouseLocation)
     }
 
     func applySizePreset(width: Double, height: Double) {
-        settingsStore.settings.expandedWidth = width
-        settingsStore.settings.expandedHeight = height
-        applyCurrentFrame(animated: true)
+        withAnimation(.spring(response: 0.36, dampingFraction: 0.80)) {
+            settingsStore.settings.expandedWidth = width
+            settingsStore.settings.expandedHeight = height
+        }
+        updatePanelHitTesting(mouseLocation: NSEvent.mouseLocation)
     }
 
     var shouldShowCompactWings: Bool {
@@ -283,7 +280,13 @@ final class NotchCoordinator: ObservableObject {
         }
     }
 
+    var shouldStayExpanded: Bool {
+        isPinnedOpen || isDropTargeted || isResizing || isAddingQuickApp || isEditingHomeGadgets || isEditingQuickApps
+    }
+
     func handleHoverChanged(_ hovering: Bool) {
+        guard hovering != isPointerInsideNotch else { return }
+        isPointerInsideNotch = hovering
         hoverTask?.cancel()
         collapseTask?.cancel()
 
@@ -297,11 +300,11 @@ final class NotchCoordinator: ObservableObject {
                 self?.transition(to: .expanded)
             }
         } else {
-            guard !isPinnedOpen && !isDropTargeted && !isResizing else { return }
+            guard !shouldStayExpanded else { return }
             collapseTask = Task { [weak self] in
-                try? await Task.sleep(nanoseconds: 280_000_000)
+                try? await Task.sleep(nanoseconds: 240_000_000)
                 guard !Task.isCancelled else { return }
-                guard let self, !self.isPinnedOpen, !self.isDropTargeted, !self.isResizing else { return }
+                guard let self, !self.isPointerInsideNotch, !self.shouldStayExpanded else { return }
                 self.showMirror = false
                 self.transition(to: self.shouldShowCompactWings ? .compact : .closed)
             }
@@ -313,6 +316,9 @@ final class NotchCoordinator: ObservableObject {
         collapseTask?.cancel()
         if displayState == .expanded {
             isPinnedOpen = false
+            isAddingQuickApp = false
+            isEditingHomeGadgets = false
+            isEditingQuickApps = false
             showMirror = false
             transition(to: shouldShowCompactWings ? .compact : .closed)
         } else {
@@ -321,22 +327,67 @@ final class NotchCoordinator: ObservableObject {
     }
 
     func openTab(_ tab: NotchTab) {
-        selectedTab = tab
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.84)) {
+            selectedTab = tab
+        }
         transition(to: .expanded)
     }
 
+    /// Choreographed 2-stage 120Hz GPU SwiftUI spring transition (ZERO NSWindow.setFrame stutter!).
     func transition(to state: NotchDisplayState) {
-        let targetFrame = currentGeometry.panelFrame(for: state)
-        withAnimation(.spring(response: 0.34, dampingFraction: 0.80)) {
-            displayState = state
+        transitionStageTask?.cancel()
+
+        if state == .expanded {
+            panel?.ignoresMouseEvents = false
+            panel?.orderFrontRegardless()
+            withAnimation(.spring(response: 0.36, dampingFraction: 0.78, blendDuration: 0.10)) {
+                displayState = .expanded
+            }
+            transitionStageTask = Task { [weak self] in
+                try? await Task.sleep(nanoseconds: 35_000_000)
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    withAnimation(.easeOut(duration: 0.22)) {
+                        self?.isContentVisible = true
+                    }
+                }
+            }
+        } else {
+            if displayState == .expanded {
+                withAnimation(.easeOut(duration: 0.11)) {
+                    isContentVisible = false
+                }
+                transitionStageTask = Task { [weak self] in
+                    try? await Task.sleep(nanoseconds: 55_000_000)
+                    guard !Task.isCancelled else { return }
+                    await MainActor.run {
+                        guard let self else { return }
+                        withAnimation(.spring(response: 0.30, dampingFraction: 0.86, blendDuration: 0.08)) {
+                            self.displayState = state
+                        }
+                        self.updatePanelHitTesting(mouseLocation: NSEvent.mouseLocation)
+                    }
+                }
+            } else {
+                isContentVisible = false
+                withAnimation(.spring(response: 0.34, dampingFraction: 0.82, blendDuration: 0.08)) {
+                    displayState = state
+                }
+                updatePanelHitTesting(mouseLocation: NSEvent.mouseLocation)
+            }
         }
+    }
+
+    func updatePanelHitTesting(mouseLocation: NSPoint) {
         guard let panel else { return }
-        NSAnimationContext.runAnimationGroup { ctx in
-            ctx.duration = 0.28
-            ctx.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            panel.animator().setFrame(targetFrame, display: true)
+        if isResizing || isDropTargeted {
+            panel.ignoresMouseEvents = false
+            return
         }
-        panel.orderFrontRegardless()
+        let hitMargin: CGFloat = displayState == .expanded ? 14 : 6
+        let activeRect = currentGeometry.activeScreenRect(for: displayState, extraMargin: hitMargin)
+        let inside = activeRect.contains(mouseLocation)
+        panel.ignoresMouseEvents = !inside
     }
 
     func injectDemoActivity() {
@@ -493,15 +544,29 @@ final class NotchCoordinator: ObservableObject {
     }
 
     private func setupWindow() {
-        let frame = currentGeometry.panelFrame(for: .closed)
-        let panel = NotchPanel(contentRect: frame)
+        let canvas = currentGeometry.canvasFrame
+        let panel = NotchPanel(contentRect: canvas)
         let rootView = NotchRootView(coordinator: self)
-        let hosting = NSHostingView(rootView: rootView)
-        hosting.frame = NSRect(origin: .zero, size: frame.size)
+        let hosting = PassthroughHostingView(rootView: rootView)
+        hosting.frame = NSRect(origin: .zero, size: canvas.size)
         hosting.autoresizingMask = [.width, .height]
+        hosting.shouldAcceptHit = { [weak self] pointInView in
+            guard let self, let panel = self.panel else { return false }
+            if self.isResizing || self.isDropTargeted { return true }
+            let screenPoint = NSPoint(
+                x: panel.frame.minX + pointInView.x,
+                y: panel.frame.minY + pointInView.y
+            )
+            let rect = self.currentGeometry.activeScreenRect(
+                for: self.displayState,
+                extraMargin: self.displayState == .expanded ? 12 : 4
+            )
+            return rect.contains(screenPoint)
+        }
         panel.contentView = hosting
         panel.orderFrontRegardless()
         self.panel = panel
+        updatePanelHitTesting(mouseLocation: NSEvent.mouseLocation)
     }
 
     private func setupScreenObserver() {
@@ -512,23 +577,45 @@ final class NotchCoordinator: ObservableObject {
         ) { [weak self] _ in
             Task { @MainActor in
                 guard let self else { return }
-                let targetFrame = self.currentGeometry.panelFrame(for: self.displayState)
-                self.panel?.setFrame(targetFrame, display: true)
+                self.panel?.setFrame(self.currentGeometry.canvasFrame, display: true)
+                self.updatePanelHitTesting(mouseLocation: NSEvent.mouseLocation)
             }
         }
     }
 
-    private func setupDragMonitor() {
-        dragMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDragged]) { [weak self] _ in
+    private func setupPointerMonitors() {
+        globalPointerMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged]) { [weak self] event in
             Task { @MainActor in
-                guard let self, self.settingsStore.settings.enableShelf else { return }
-                let loc = NSEvent.mouseLocation
-                if self.currentGeometry.activationHotZone.contains(loc), self.displayState != .expanded {
-                    self.selectedTab = .shelf
-                    self.transition(to: .expanded)
-                }
+                self?.processPointerEvent(isDragging: event.type == .leftMouseDragged)
             }
         }
+        localPointerMonitor = NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged]) { [weak self] event in
+            Task { @MainActor in
+                self?.processPointerEvent(isDragging: event.type == .leftMouseDragged)
+            }
+            return event
+        }
+    }
+
+    private func processPointerEvent(isDragging: Bool) {
+        let loc = NSEvent.mouseLocation
+        let geo = currentGeometry
+
+        // Auto-open File Drop Shelf when dragging anything into the top-center hot zone
+        if isDragging && settingsStore.settings.enableShelf && geo.activationHotZone.contains(loc) {
+            panel?.ignoresMouseEvents = false
+            if displayState != .expanded {
+                selectedTab = .shelf
+                transition(to: .expanded)
+            }
+            return
+        }
+
+        // Hysteresis cushion: wider exit boundary when expanded so edge clicks never collapse accidentally
+        let enterRect = geo.activeScreenRect(for: displayState, extraMargin: displayState == .expanded ? 22 : 4)
+        let inside = enterRect.contains(loc)
+        updatePanelHitTesting(mouseLocation: loc)
+        handleHoverChanged(inside)
     }
 
     private func setupStatusBarItem() {

@@ -24,7 +24,7 @@ enum ScreenshotExporter {
             sampleCaptures: sampleImages
         )
         let heroView = macOSDesktopBackdrop(width: 1120, height: 630, showMenuBar: true) {
-            NotchRootView(coordinator: homeCoord, forceConcaveEars: true)
+            NotchRootView(coordinator: homeCoord, forceConcaveEars: true, isShowcaseMode: true)
                 .frame(width: 740, height: 555)
         }
         renderToPNG(heroView, to: outDir.appendingPathComponent("hero-banner.png"), scale: 2.0)
@@ -37,7 +37,7 @@ enum ScreenshotExporter {
         )
         aiCoord.selectedAIFilter = "All"
         let aiView = macOSDesktopBackdrop(width: 1120, height: 630, showMenuBar: true) {
-            NotchRootView(coordinator: aiCoord, forceConcaveEars: true)
+            NotchRootView(coordinator: aiCoord, forceConcaveEars: true, isShowcaseMode: true)
                 .frame(width: 720, height: 400)
         }
         renderToPNG(aiView, to: outDir.appendingPathComponent("ai-radar.png"), scale: 2.0)
@@ -63,17 +63,17 @@ enum ScreenshotExporter {
                     .foregroundStyle(.white.opacity(0.95))
 
                 stateStrip(label: "1. Closed — Blends cleanly into the MacBook hardware notch") {
-                    NotchRootView(coordinator: closedCoord, forceConcaveEars: true)
+                    NotchRootView(coordinator: closedCoord, forceConcaveEars: true, isShowcaseMode: true)
                         .frame(width: 214, height: 34)
                 }
 
                 stateStrip(label: "2. Compact Wings — Live AI / Render progress & Now Playing beside the notch") {
-                    NotchRootView(coordinator: compactCoord, forceConcaveEars: true)
+                    NotchRootView(coordinator: compactCoord, forceConcaveEars: true, isShowcaseMode: true)
                         .frame(width: 400, height: 36)
                 }
 
                 stateStrip(label: "3. Expanded Hub — File Drop Shelf, Gadgets, 5-Cap Tray & AI Radar") {
-                    NotchRootView(coordinator: shelfCoord, forceConcaveEars: true)
+                    NotchRootView(coordinator: shelfCoord, forceConcaveEars: true, isShowcaseMode: true)
                         .frame(width: 700, height: 245)
                 }
             }

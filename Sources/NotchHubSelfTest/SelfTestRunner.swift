@@ -38,6 +38,8 @@ func runAllTests() throws {
     let customExpanded = customGeo.panelFrame(for: .expanded)
     check(customExpanded.width == 920 && customExpanded.height == 420, "custom adjustable expanded size mismatch")
     check(customGeo.panelFrame(for: .compact).width > compact.width, "custom compact wing extra width mismatch")
+    check(customGeo.canvasFrame.width >= customExpanded.width && customGeo.canvasFrame.maxY == 982, "fixed canvas frame must contain expanded pill and sit flush at top")
+    check(customGeo.activeScreenRect(for: .expanded, extraMargin: 20).width == 960, "activeScreenRect margin mismatch")
     print("[PASS] testNotchGeometryOnNotchedDisplay")
 
     // 2. Non-notched external display geometry

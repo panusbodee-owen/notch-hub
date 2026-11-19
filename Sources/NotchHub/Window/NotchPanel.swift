@@ -1,5 +1,19 @@
 import AppKit
 import Foundation
+import SwiftUI
+
+/// Custom NSHostingView that rejects hit-testing outside the active visible Notch pill,
+/// allowing 100% native click-through across the fixed-canvas transparent NSPanel.
+final class PassthroughHostingView<Content: View>: NSHostingView<Content> {
+    var shouldAcceptHit: ((NSPoint) -> Bool)?
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        if let shouldAcceptHit, !shouldAcceptHit(point) {
+            return nil
+        }
+        return super.hitTest(point)
+    }
+}
 
 final class NotchPanel: NSPanel {
     init(contentRect: NSRect) {
@@ -23,7 +37,7 @@ final class NotchPanel: NSPanel {
         isMovableByWindowBackground = false
         hidesOnDeactivate = false
         acceptsMouseMovedEvents = true
-        ignoresMouseEvents = false
+        ignoresMouseEvents = true
     }
 
     override var canBecomeKey: Bool { true }

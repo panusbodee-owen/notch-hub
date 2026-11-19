@@ -31,38 +31,42 @@ private struct CircularGaugeRing: View {
 
 private struct AudioWaveformBars: View {
     let isPlaying: Bool
-    let phase: Int
 
-    private let baseHeights: [CGFloat] = [
-        0.25, 0.45, 0.35, 0.72, 0.90, 0.55, 0.40, 0.85, 1.0, 0.68,
-        0.52, 0.92, 0.78, 0.44, 0.62, 0.84, 0.48, 0.36, 0.54, 0.28, 0.20
-    ]
+    private let barCount = 21
 
     var body: some View {
-        HStack(alignment: .center, spacing: 2.5) {
-            ForEach(0..<baseHeights.count, id: \.self) { idx in
-                let raw = baseHeights[(idx + (isPlaying ? phase : 0)) % baseHeights.count]
-                let factor: CGFloat = isPlaying ? raw : max(0.18, raw * 0.42)
-                let isHighlight = isPlaying && idx >= 2 && idx <= 15
-                Capsule()
-                    .fill(
-                        isHighlight
-                            ? LinearGradient(
-                                colors: [Color(red: 0.28, green: 0.95, blue: 0.55), Color(red: 0.12, green: 0.78, blue: 0.45)],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                            : LinearGradient(
-                                colors: [Color.white.opacity(0.28), Color.white.opacity(0.18)],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                    )
-                    .frame(width: 2.8, height: max(4, 22 * factor))
-                    .shadow(color: isHighlight ? Color.green.opacity(0.45) : .clear, radius: 3)
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !isPlaying)) { timeline in
+            let t = isPlaying ? timeline.date.timeIntervalSinceReferenceDate : 0.0
+            HStack(alignment: .center, spacing: 2.5) {
+                ForEach(0..<barCount, id: \.self) { idx in
+                    let normIdx = Double(idx) / Double(barCount - 1)
+                    // Bell-curve envelope so center bars dance taller like Apple Music / Dynamic Island
+                    let envelope = sin(normIdx * .pi)
+                    let wave = isPlaying
+                        ? 0.5 + 0.5 * sin(t * 6.2 + Double(idx) * 0.72) * cos(t * 2.9 - Double(idx) * 0.35)
+                        : 0.22 + 0.14 * envelope
+                    let factor = max(0.16, min(1.0, (0.24 + 0.76 * wave) * (0.35 + 0.65 * envelope)))
+                    let isHighlight = isPlaying && idx >= 2 && idx <= 16
+                    Capsule()
+                        .fill(
+                            isHighlight
+                                ? LinearGradient(
+                                    colors: [Color(red: 0.28, green: 0.96, blue: 0.56), Color(red: 0.12, green: 0.78, blue: 0.45)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                                : LinearGradient(
+                                    colors: [Color.white.opacity(0.28), Color.white.opacity(0.18)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                        )
+                        .frame(width: 2.8, height: max(4, 22 * factor))
+                        .shadow(color: isHighlight ? Color.green.opacity(0.45) : .clear, radius: 3)
+                }
             }
+            .frame(height: 22)
         }
-        .frame(height: 22)
     }
 }
 
@@ -99,10 +103,6 @@ struct HomeWidgetView: View {
 
     private var gridGadgets: [HomeGadgetKind] {
         activeGadgets.filter { !$0.isFullWidth }
-    }
-
-    private var wavePhase: Int {
-        Int(coordinator.currentTime.timeIntervalSinceReferenceDate) % 21
     }
 
     var body: some View {
@@ -455,8 +455,8 @@ struct HomeWidgetView: View {
                         .stroke(running ? Color.green.opacity(0.35) : Color.white.opacity(0.08), lineWidth: 0.9)
                 )
             }
-            .buttonStyle(.plain)
-            .help("\(item.name) — \(item.target)")
+                    .buttonStyle(NotchSpringButtonStyle(pressedScale: 0.94))
+                    .help("\(item.name) — \(item.target)")
 
             if coordinator.isEditingQuickApps {
                 HStack(spacing: 1) {
@@ -737,7 +737,7 @@ struct HomeWidgetView: View {
                         .overlay(Capsule().stroke(accent.opacity(0.65), lineWidth: 1.1))
                         .shadow(color: accent.opacity(0.22), radius: 5)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(NotchSpringButtonStyle(pressedScale: 0.92))
                     .help("\(item.category.rawValue): \(item.subtitle)")
                 }
             }
@@ -806,7 +806,7 @@ struct HomeWidgetView: View {
                 Spacer()
             }
 
-            AudioWaveformBars(isPlaying: media.track.isPlaying, phase: wavePhase)
+            AudioWaveformBars(isPlaying: media.track.isPlaying)
                 .frame(maxWidth: .infinity, alignment: .center)
         }
         .padding(11)

@@ -99,6 +99,28 @@ public struct NotchGeometry: Sendable {
         return CGRect(x: round(x), y: round(y), width: round(size.width), height: round(size.height))
     }
 
+    /// Fixed transparent canvas frame used by the borderless NSPanel so SwiftUI can
+    /// morph the notch silhouette purely on the GPU at 120Hz without NSWindow.setFrame stutter.
+    public var canvasFrame: CGRect {
+        let maxW = min(1160, metrics.frame.width)
+        let maxH = min(620, metrics.frame.height - 40)
+        let x = metrics.frame.minX + (metrics.frame.width - maxW) / 2.0
+        let y = metrics.frame.maxY - maxH
+        return CGRect(x: round(x), y: round(y), width: round(maxW), height: round(maxH))
+    }
+
+    /// Top-centered screen rect of the visible notch pill for a given state (plus optional hit-test margin).
+    public func activeScreenRect(for state: NotchDisplayState, extraMargin: CGFloat = 0) -> CGRect {
+        let base = panelFrame(for: state)
+        guard extraMargin > 0 else { return base }
+        return CGRect(
+            x: base.minX - extraMargin,
+            y: base.minY - extraMargin,
+            width: base.width + extraMargin * 2,
+            height: base.height + extraMargin // keep top anchored cleanly
+        )
+    }
+
     /// A forgiving top-center hot zone used to detect drag-to-notch or pointer arrival.
     public var activationHotZone: CGRect {
         let width = max(compactWidth, 280)
