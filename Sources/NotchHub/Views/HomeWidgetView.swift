@@ -543,7 +543,13 @@ struct HomeWidgetView: View {
                 }
             }
 
-            HStack(spacing: 8) {
+            LazyVGrid(
+                columns: Array(
+                    repeating: GridItem(.flexible(minimum: 40, maximum: .infinity), spacing: 8),
+                    count: max(1, captures.maxItems)
+                ),
+                spacing: 8
+            ) {
                 ForEach(0..<captures.maxItems, id: \.self) { slotIdx in
                     if slotIdx < captures.items.count {
                         captureThumbnailCard(captures.items[slotIdx])
@@ -565,41 +571,37 @@ struct HomeWidgetView: View {
                 coordinator.copyScreenshot(item)
             } label: {
                 ZStack(alignment: .bottomLeading) {
-                    if let nsImg = NSImage(contentsOfFile: item.filePath) {
-                        Image(nsImage: nsImg)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 66)
-                            .clipped()
-                    } else {
-                        Rectangle()
-                            .fill(Color.white.opacity(0.08))
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 66)
-                            .overlay(
+                    Color.white.opacity(0.06)
+                        .frame(height: 66)
+                        .overlay {
+                            if let nsImg = NSImage(contentsOfFile: item.filePath) {
+                                Image(nsImage: nsImg)
+                                    .resizable()
+                                    .scaledToFill()
+                            } else {
                                 Image(systemName: "photo")
                                     .foregroundStyle(.white.opacity(0.4))
-                            )
-                    }
+                            }
+                        }
+                        .clipped()
 
                     LinearGradient(
-                        colors: [.clear, .black.opacity(0.75)],
+                        colors: [.clear, .black.opacity(0.78)],
                         startPoint: .center,
                         endPoint: .bottom
                     )
                     .frame(height: 66)
 
-                    HStack(spacing: 3) {
-                        Text(isCopied ? l10n.copied : item.displayName)
-                            .font(.system(size: 8.5, weight: isCopied ? .bold : .medium))
-                            .foregroundStyle(isCopied ? .green : .white.opacity(0.9))
-                            .lineLimit(1)
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.horizontal, 6)
-                    .padding(.bottom, 4)
+                    Text(isCopied ? l10n.copied : item.displayName)
+                        .font(.system(size: 8.5, weight: isCopied ? .bold : .medium))
+                        .foregroundStyle(isCopied ? .green : .white.opacity(0.92))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .padding(.horizontal, 6)
+                        .padding(.bottom, 4)
                 }
+                .frame(minWidth: 0, maxWidth: .infinity)
+                .frame(height: 66)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)

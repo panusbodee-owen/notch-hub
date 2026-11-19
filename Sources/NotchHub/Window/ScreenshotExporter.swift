@@ -276,7 +276,8 @@ enum ScreenshotExporter {
 
         var paths: [String] = []
         for (idx, s) in specs.enumerated() {
-            let size = NSSize(width: 320, height: 200)
+            // Make index 4 an extreme ultra-wide 1400x140 panorama to regress-test aspect-ratio containment
+            let size = idx == 4 ? NSSize(width: 1400, height: 140) : NSSize(width: 320, height: 200)
             let img = NSImage(size: size)
             img.lockFocus()
             let grad = NSGradient(starting: s.c1, ending: s.c2)

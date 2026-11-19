@@ -213,8 +213,10 @@ struct NotchRootView: View {
                 }
             }
             .padding(.horizontal, earRadius > 0 ? earRadius : 0)
+            .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
             .clipShape(shellShape)
         }
+        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
         .contentShape(shellShape)
         .onTapGesture {
             if coordinator.displayState != .expanded {
@@ -306,47 +308,51 @@ struct NotchRootView: View {
         VStack(spacing: 10) {
             // Top Header & Smooth Animated Tab Strip
             HStack(spacing: 6) {
-                ForEach(visibleTabs) { tab in
-                    let isSelected = coordinator.selectedTab == tab
-                    Button {
-                        withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
-                            coordinator.selectedTab = tab
-                        }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: tab.symbolName)
-                                .font(.system(size: 10, weight: .semibold))
-                            Text(coordinator.l10n.tabTitle(tab))
-                                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                            if tab == .shelf && !coordinator.shelfStore.items.isEmpty {
-                                Text("\(coordinator.shelfStore.items.count)")
-                                    .font(.system(size: 9, weight: .bold))
-                                    .padding(.horizontal, 4)
-                                    .padding(.vertical, 1)
-                                    .background(Color.white.opacity(0.16), in: Capsule())
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 5) {
+                        ForEach(visibleTabs) { tab in
+                            let isSelected = coordinator.selectedTab == tab
+                            Button {
+                                withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                                    coordinator.selectedTab = tab
+                                }
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: tab.symbolName)
+                                        .font(.system(size: 10, weight: .semibold))
+                                    Text(coordinator.l10n.tabTitle(tab))
+                                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                        .lineLimit(1)
+                                    if tab == .shelf && !coordinator.shelfStore.items.isEmpty {
+                                        Text("\(coordinator.shelfStore.items.count)")
+                                            .font(.system(size: 9, weight: .bold))
+                                            .padding(.horizontal, 4)
+                                            .padding(.vertical, 1)
+                                            .background(Color.white.opacity(0.16), in: Capsule())
+                                    }
+                                    if tab == .ai && !coordinator.activityStore.activities.isEmpty {
+                                        Circle()
+                                            .fill(colorForActivity(coordinator.activityStore.primaryActivity?.state ?? .running))
+                                            .frame(width: 6, height: 6)
+                                            .shadow(color: colorForActivity(coordinator.activityStore.primaryActivity?.state ?? .running).opacity(0.8), radius: 3)
+                                    }
+                                }
+                                .padding(.horizontal, 9)
+                                .padding(.vertical, 5)
+                                .background(
+                                    isSelected ? palette.accent.opacity(0.22) : Color.clear,
+                                    in: Capsule()
+                                )
+                                .overlay(
+                                    Capsule().stroke(isSelected ? palette.accent.opacity(0.50) : Color.clear, lineWidth: 0.9)
+                                )
+                                .foregroundStyle(isSelected ? .white : .white.opacity(0.6))
                             }
-                            if tab == .ai && !coordinator.activityStore.activities.isEmpty {
-                                Circle()
-                                    .fill(colorForActivity(coordinator.activityStore.primaryActivity?.state ?? .running))
-                                    .frame(width: 6, height: 6)
-                                    .shadow(color: colorForActivity(coordinator.activityStore.primaryActivity?.state ?? .running).opacity(0.8), radius: 3)
-                            }
+                            .buttonStyle(NotchSpringButtonStyle(pressedScale: 0.95))
                         }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(
-                            isSelected ? palette.accent.opacity(0.22) : Color.clear,
-                            in: Capsule()
-                        )
-                        .overlay(
-                            Capsule().stroke(isSelected ? palette.accent.opacity(0.50) : Color.clear, lineWidth: 0.9)
-                        )
-                        .foregroundStyle(isSelected ? .white : .white.opacity(0.6))
                     }
-                    .buttonStyle(NotchSpringButtonStyle(pressedScale: 0.95))
                 }
-
-                Spacer()
+                .frame(minWidth: 0, maxWidth: .infinity)
 
                 Button {
                     withAnimation(.spring(response: 0.26, dampingFraction: 0.82)) {
