@@ -46,9 +46,11 @@ final class NotchCoordinator: ObservableObject {
     private var collapseTask: Task<Void, Never>?
     private var transitionStageTask: Task<Void, Never>?
     private var focusTickTimer: Timer?
+    private var expandedWatchdogTimer: Timer?
     private var globalPointerMonitor: Any?
     private var localPointerMonitor: Any?
     private var isPointerInsideNotch: Bool = false
+    private var lastHandledDragChangeCount: Int = NSPasteboard(name: .drag).changeCount
     private var cancellables = Set<AnyCancellable>()
 
     init(inMemoryOnly: Bool = false) {
@@ -149,6 +151,7 @@ final class NotchCoordinator: ObservableObject {
         aiDiscovery.stop()
         activityServer?.stop()
         focusTickTimer?.invalidate()
+        expandedWatchdogTimer?.invalidate()
         hoverTask?.cancel()
         collapseTask?.cancel()
         transitionStageTask?.cancel()
@@ -219,8 +222,17 @@ final class NotchCoordinator: ObservableObject {
         NotchThemePalette.palette(for: settingsStore.settings.theme)
     }
 
+    /// Always lock NotchHub to the built-in notched display (if present) or the primary display,
+    /// so hit-testing never desyncs when focus moves to a secondary monitor.
+    private var targetScreen: NSScreen? {
+        if let notched = NSScreen.screens.first(where: { $0.safeAreaInsets.top > 0 }) {
+            return notched
+        }
+        return NSScreen.screens.first ?? NSScreen.main
+    }
+
     var currentGeometry: NotchGeometry {
-        let screen = NSScreen.main ?? NSScreen.screens.first
+        let screen = targetScreen
         let metrics = ScreenMetrics(
             frame: screen?.frame ?? CGRect(x: 0, y: 0, width: 1512, height: 982),
             topSafeAreaInset: screen?.safeAreaInsets.top ?? 0,
@@ -292,28 +304,42 @@ final class NotchCoordinator: ObservableObject {
     }
 
     func handleHoverChanged(_ hovering: Bool) {
-        guard hovering != isPointerInsideNotch else { return }
+        let stateChanged = (hovering != isPointerInsideNotch)
         isPointerInsideNotch = hovering
-        hoverTask?.cancel()
-        collapseTask?.cancel()
 
         if hovering {
+            collapseTask?.cancel()
+            collapseTask = nil
+            guard stateChanged else { return }
             guard settingsStore.settings.hoverExpandEnabled else { return }
             if displayState == .expanded { return }
+            hoverTask?.cancel()
             let delayNs = UInt64(max(0.05, settingsStore.settings.hoverDelaySeconds) * 1_000_000_000)
             hoverTask = Task { [weak self] in
                 try? await Task.sleep(nanoseconds: delayNs)
                 guard !Task.isCancelled else { return }
-                self?.transition(to: .expanded)
+                guard let self, self.isPointerInsideNotch else { return }
+                self.transition(to: .expanded)
             }
         } else {
-            guard !shouldStayExpanded else { return }
+            hoverTask?.cancel()
+            hoverTask = nil
+            guard displayState == .expanded, !shouldStayExpanded else { return }
+            // Schedule collapse if not already pending (fixes stuck-open after click/drag!)
+            guard collapseTask == nil else { return }
             collapseTask = Task { [weak self] in
                 try? await Task.sleep(nanoseconds: 240_000_000)
                 guard !Task.isCancelled else { return }
-                guard let self, !self.isPointerInsideNotch, !self.shouldStayExpanded else { return }
-                self.showMirror = false
-                self.transition(to: self.shouldShowCompactWings ? .compact : .closed)
+                await MainActor.run {
+                    guard let self else { return }
+                    self.collapseTask = nil
+                    let loc = NSEvent.mouseLocation
+                    let cushion = self.currentGeometry.activeScreenRect(for: .expanded, extraMargin: 22)
+                    guard !cushion.contains(loc), !self.shouldStayExpanded else { return }
+                    self.isPointerInsideNotch = false
+                    self.showMirror = false
+                    self.transition(to: self.shouldShowCompactWings ? .compact : .closed)
+                }
             }
         }
     }
@@ -345,31 +371,35 @@ final class NotchCoordinator: ObservableObject {
         transitionStageTask?.cancel()
 
         if state == .expanded {
+            collapseTask?.cancel()
+            collapseTask = nil
             panel?.ignoresMouseEvents = false
             panel?.orderFrontRegardless()
-            withAnimation(.spring(response: 0.36, dampingFraction: 0.78, blendDuration: 0.10)) {
+            withAnimation(.spring(response: 0.34, dampingFraction: 0.80, blendDuration: 0.08)) {
                 displayState = .expanded
             }
+            startExpandedWatchdog()
             transitionStageTask = Task { [weak self] in
-                try? await Task.sleep(nanoseconds: 35_000_000)
+                try? await Task.sleep(nanoseconds: 30_000_000)
                 guard !Task.isCancelled else { return }
                 await MainActor.run {
-                    withAnimation(.easeOut(duration: 0.22)) {
+                    withAnimation(.easeOut(duration: 0.20)) {
                         self?.isContentVisible = true
                     }
                 }
             }
         } else {
+            stopExpandedWatchdog()
             if displayState == .expanded {
-                withAnimation(.easeOut(duration: 0.11)) {
+                withAnimation(.easeOut(duration: 0.09)) {
                     isContentVisible = false
                 }
                 transitionStageTask = Task { [weak self] in
-                    try? await Task.sleep(nanoseconds: 55_000_000)
+                    try? await Task.sleep(nanoseconds: 35_000_000)
                     guard !Task.isCancelled else { return }
                     await MainActor.run {
                         guard let self else { return }
-                        withAnimation(.spring(response: 0.30, dampingFraction: 0.86, blendDuration: 0.08)) {
+                        withAnimation(.spring(response: 0.26, dampingFraction: 0.88, blendDuration: 0.06)) {
                             self.displayState = state
                         }
                         self.updatePanelHitTesting(mouseLocation: NSEvent.mouseLocation)
@@ -377,12 +407,39 @@ final class NotchCoordinator: ObservableObject {
                 }
             } else {
                 isContentVisible = false
-                withAnimation(.spring(response: 0.34, dampingFraction: 0.82, blendDuration: 0.08)) {
+                withAnimation(.spring(response: 0.30, dampingFraction: 0.84, blendDuration: 0.06)) {
                     displayState = state
                 }
                 updatePanelHitTesting(mouseLocation: NSEvent.mouseLocation)
             }
         }
+    }
+
+    /// Lightweight watchdog active ONLY while expanded so if macOS drops a mouseMoved event
+    /// (e.g. window focus change or Space switch), the Notch never gets stuck open.
+    private func startExpandedWatchdog() {
+        expandedWatchdogTimer?.invalidate()
+        expandedWatchdogTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                guard self.displayState == .expanded else {
+                    self.stopExpandedWatchdog()
+                    return
+                }
+                let loc = NSEvent.mouseLocation
+                let cushion = self.currentGeometry.activeScreenRect(for: .expanded, extraMargin: 22)
+                let inside = cushion.contains(loc)
+                self.updatePanelHitTesting(mouseLocation: loc)
+                if !inside && !self.shouldStayExpanded {
+                    self.handleHoverChanged(false)
+                }
+            }
+        }
+    }
+
+    private func stopExpandedWatchdog() {
+        expandedWatchdogTimer?.invalidate()
+        expandedWatchdogTimer = nil
     }
 
     func updatePanelHitTesting(mouseLocation: NSPoint) {
@@ -604,18 +661,32 @@ final class NotchCoordinator: ObservableObject {
         }
     }
 
+    private func isActiveFileDragOnPasteboard() -> Bool {
+        let dragPB = NSPasteboard(name: .drag)
+        guard dragPB.changeCount != lastHandledDragChangeCount else { return false }
+        guard let types = dragPB.types, types.contains(.fileURL) else { return false }
+        if let urls = dragPB.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL] {
+            return !urls.isEmpty
+        }
+        return false
+    }
+
     private func processPointerEvent(isDragging: Bool) {
         let loc = NSEvent.mouseLocation
         let geo = currentGeometry
 
-        // Auto-open File Drop Shelf when dragging anything into the top-center hot zone
+        // Auto-open File Drop Shelf ONLY when actually dragging real files (never on Chrome tabs or window resizing!)
         if isDragging && settingsStore.settings.enableShelf && geo.activationHotZone.contains(loc) {
-            panel?.ignoresMouseEvents = false
-            if displayState != .expanded {
-                selectedTab = .shelf
-                transition(to: .expanded)
+            if isActiveFileDragOnPasteboard() {
+                lastHandledDragChangeCount = NSPasteboard(name: .drag).changeCount
+                panel?.ignoresMouseEvents = false
+                isPointerInsideNotch = true
+                if displayState != .expanded {
+                    selectedTab = .shelf
+                    transition(to: .expanded)
+                }
+                return
             }
-            return
         }
 
         // Hysteresis cushion: wider exit boundary when expanded so edge clicks never collapse accidentally

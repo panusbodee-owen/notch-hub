@@ -197,7 +197,8 @@ struct NotchRootView: View {
                 switch coordinator.displayState {
                 case .closed:
                     closedView
-                        .transition(.opacity)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                        .transition(.opacity.animation(.easeIn(duration: 0.14).delay(0.10)))
                 case .compact:
                     compactWingsView
                         .transition(.opacity.combined(with: .scale(scale: 0.96)))
